@@ -14,6 +14,13 @@ const FriendPanel = ({ isOpen, onClose, onGoldChange }) => {
   const [giftAmount, setGiftAmount] = useState('');
   const [giftingTo, setGiftingTo] = useState(null);
 
+  const loadFriends = async () => {
+    setLoading(true);
+    const list = await getFriendsList();
+    setFriends(list);
+    setLoading(false);
+  };
+
   useEffect(() => {
     if (isOpen) {
       loadFriends();
@@ -23,13 +30,6 @@ const FriendPanel = ({ isOpen, onClose, onGoldChange }) => {
       setMessage({ text: '', type: 'success' });
     }
   }, [isOpen]);
-
-  const loadFriends = async () => {
-    setLoading(true);
-    const list = await getFriendsList();
-    setFriends(list);
-    setLoading(false);
-  };
 
   const handleSearch = async () => {
     const sanitized = sanitizeString(searchQuery.trim());

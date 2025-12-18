@@ -24,6 +24,7 @@ const ParticleEffect = ({ trigger, type = 'success', level = 0 }) => {
       distance: level >= 19 ? 180 + Math.random() * 120 : level >= 15 ? 150 + Math.random() * 100 : 100 + Math.random() * 80,
       duration: 0.8 + Math.random() * 0.4,
       angle: (i / particleCount) * 360 + Math.random() * 15,
+      isRound: Math.random() > 0.4, // 렌더 시 Math.random 호출 방지
     }));
 
     // 링 (6강+)
@@ -157,7 +158,7 @@ const ParticleEffect = ({ trigger, type = 'success', level = 0 }) => {
               style={{
                 position: 'absolute',
                 width: p.size, height: p.size,
-                borderRadius: Math.random() > 0.4 ? '50%' : '2px',
+                borderRadius: p.isRound ? '50%' : '2px',
                 backgroundColor: p.color,
                 boxShadow: '0 0 ' + (p.size * 1.5) + 'px ' + p.color,
               }}

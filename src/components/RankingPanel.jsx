@@ -12,13 +12,8 @@ const RankingPanel = ({ isOpen, onClose, currentUser, getRankings }) => {
   const [activeTab, setActiveTab] = useState('maxLevel');
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (isOpen && getRankings) {
-      loadRankings();
-    }
-  }, [isOpen]);
-
   const loadRankings = async () => {
+    if (!getRankings) return;
     setLoading(true);
     try {
       const data = await getRankings();
@@ -28,6 +23,12 @@ const RankingPanel = ({ isOpen, onClose, currentUser, getRankings }) => {
     }
     setLoading(false);
   };
+
+  useEffect(() => {
+    if (isOpen && getRankings) {
+      loadRankings();
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 

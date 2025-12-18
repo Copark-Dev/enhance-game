@@ -17,16 +17,21 @@ import DailyRewardPanel from './DailyRewardPanel';
 import AchievementPanel from './AchievementPanel';
 import RankingPanel from './RankingPanel';
 import BattlePanel from './BattlePanel';
+import BattleNotificationModal from './BattleNotificationModal';
+import BottomNavigation from './BottomNavigation';
 
 const EnhanceGame = () => {
   const navigate = useNavigate();
-  const { user, logout, updateUserData, getRankings, claimDailyReward, claimAchievement, updateBattleStats, getFriendsList } = useAuth();
+  const {
+    user, logout, updateUserData, getRankings, claimDailyReward, claimAchievement, updateBattleStats,
+    getRandomOpponents, saveBattleNotification, getBattleNotifications, markBattleNotificationsRead
+  } = useAuth();
   const {
     level, gold, isEnhancing, result, isDestroyed, stats, lastSellPrice, isNewRecord,
     successRate, downgradeRate, destroyRate, enhanceCost, inventory,
-    buffs, activeEvent, eventMultiplier, lastRoll,
+    buffs, activeEvent, eventMultiplier, lastRoll, itemStats,
     canEnhance, enhance, sell, reset, addGold, setResult, setGold, setStats,
-    setLevel, setInventory, setBuffs, storeItem, takeItem
+    setLevel, setInventory, setBuffs, setItemStats, storeItem, takeItem
   } = useEnhance(0, user?.gold || 50000);
 
   const [showMobileStats, setShowMobileStats] = useState(false);
@@ -37,6 +42,8 @@ const EnhanceGame = () => {
   const [showRanking, setShowRanking] = useState(false);
   const [showBattle, setShowBattle] = useState(false);
   const [isMuted, setIsMuted] = useState(getMuteStatus());
+  const [battleNotifications, setBattleNotifications] = useState([]);
+  const [showBattleNotifications, setShowBattleNotifications] = useState(false);
   const sellRange = SELL_PRICE[level] || { min: 0, max: 0 };
 
   // 유저 데이터로 초기화
@@ -47,18 +54,37 @@ const EnhanceGame = () => {
       if (typeof user.level === 'number') setLevel(user.level);
       if (user.inventory) setInventory(user.inventory);
       if (user.buffs) setBuffs(user.buffs);
+      if (user.itemStats) setItemStats(user.itemStats);
     }
+  }, [user]);
+
+  // 접속 시 배틀 알림 확인
+  useEffect(() => {
+    const checkBattleNotifications = async () => {
+      if (user && getBattleNotifications) {
+        try {
+          const notifications = await getBattleNotifications();
+          if (notifications.length > 0) {
+            setBattleNotifications(notifications);
+            setShowBattleNotifications(true);
+          }
+        } catch (err) {
+          console.error('배틀 알림 로드 실패:', err);
+        }
+      }
+    };
+    checkBattleNotifications();
   }, [user]);
 
   // 데이터 변경시 Firebase 저장
   useEffect(() => {
     if (user && !isEnhancing) {
       const saveTimeout = setTimeout(() => {
-        updateUserData({ gold, stats, level, inventory, buffs });
+        updateUserData({ gold, stats, level, inventory, buffs, itemStats });
       }, 1000);
       return () => clearTimeout(saveTimeout);
     }
-  }, [gold, stats, level, inventory, buffs, isEnhancing]);
+  }, [gold, stats, level, inventory, buffs, itemStats, isEnhancing]);
 
   // 이벤트 메시지
   const eventMessages = {
@@ -144,52 +170,18 @@ const EnhanceGame = () => {
     <div style={styles.container} className="game-container">
       <div style={styles.bgGlow} />
 
-      {/* 상단 고정바 */}
+      {/* 상단 고정바 - 간소화 */}
       <div style={styles.topBar} className="top-bar">
-        {(user?.email === 'psw4887@naver.com' || user?.nickname === '박세완') && (
-          <motion.button onClick={() => navigate('/admin')} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} style={styles.adminBtn}>
-            ⚙️ 어드민
-          </motion.button>
-        )}
-
-        <div style={styles.userInfo} className="user-info">
-          {user?.profileImage && <img src={user.profileImage} alt='profile' style={styles.profileImg} className="profile-img" />}
-          <span style={styles.userName} className="user-name">{user?.nickname || '사용자'}</span>
-          <motion.button onClick={() => setShowMobileStats(true)} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} style={styles.statsBtn} className="mobile-stats-btn">
-            📊
-          </motion.button>
-          <motion.button onClick={() => setShowFriendPanel(true)} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} style={styles.friendBtn}>
-            👥
-          </motion.button>
-          <motion.button onClick={() => setShowGuide(true)} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} style={styles.guideBtn}>
-            ❓
-          </motion.button>
-          <motion.button onClick={() => setShowDailyReward(true)} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} style={styles.dailyBtn}>
-            🎁
-          </motion.button>
-          <motion.button onClick={() => setShowAchievement(true)} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} style={styles.achieveBtn}>
-            🏆
-          </motion.button>
-          <motion.button onClick={() => setShowRanking(true)} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} style={styles.rankBtn}>
-            🏅
-          </motion.button>
-          <motion.button onClick={() => setShowBattle(true)} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} style={styles.battleBtn}>
-            ⚔️
-          </motion.button>
-          <motion.button
-            onClick={() => { toggleMute(); setIsMuted(!isMuted); }}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            style={styles.soundBtn}
-          >
-            {isMuted ? '🔇' : '🔊'}
-          </motion.button>
-          <motion.button onClick={handleShare} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} style={styles.shareBtn}>
-            📤 공유
-          </motion.button>
-          <motion.button onClick={handleLogout} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} style={styles.logoutBtn}>
-            로그아웃
-          </motion.button>
+        <div style={styles.topBarLeft}>
+          {user?.profileImage && <img src={user.profileImage} alt='profile' style={styles.profileImg} />}
+          <span style={styles.userName}>{user?.nickname || '사용자'}</span>
+        </div>
+        <div style={styles.topBarRight}>
+          {(user?.email === 'psw4887@naver.com' || user?.nickname === '박세완') && (
+            <motion.button onClick={() => navigate('/admin')} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} style={styles.adminBtn}>
+              ⚙️
+            </motion.button>
+          )}
         </div>
       </div>
 
@@ -249,9 +241,15 @@ const EnhanceGame = () => {
         <div style={styles.priceInfo} className="price-info">
           <div style={styles.priceRow}><span style={styles.priceLabel}>강화 비용</span><span style={styles.priceCost}>{formatGold(enhanceCost)} G</span></div>
           <div style={styles.priceRow}><span style={styles.priceLabel}>판매 예상가</span><span style={styles.priceSell}>{formatGold(sellRange.min)} ~ {formatGold(sellRange.max)} G</span></div>
+          {level > 0 && (
+            <div style={styles.statsRow}>
+              <span style={styles.statLabel}>⚔️ {itemStats.attack}</span>
+              <span style={styles.statLabel}>❤️ {itemStats.hp}</span>
+            </div>
+          )}
         </div>
 
-        <RateDisplay successRate={successRate} downgradeRate={downgradeRate} destroyRate={destroyRate} lastRoll={lastRoll} />
+        <RateDisplay successRate={successRate} downgradeRate={downgradeRate} destroyRate={destroyRate} />
 
         <div style={styles.buttonArea}>
           {isDestroyed ? (
@@ -284,8 +282,9 @@ const EnhanceGame = () => {
           <div style={styles.inventoryLabel}>📦 보관함 ({inventory.length}/5)</div>
           <div style={styles.inventorySlots}>
             {[0, 1, 2, 3, 4].map((i) => {
-              const itemLevel = inventory[i];
-              const hasItem = itemLevel !== undefined;
+              const item = inventory[i];
+              const hasItem = item !== undefined;
+              const itemLevel = hasItem ? (item.level || item) : 0; // 이전 형식 호환
               const color = hasItem ? getLevelColor(itemLevel) : '#333';
               return (
                 <motion.div
@@ -303,7 +302,7 @@ const EnhanceGame = () => {
                   {hasItem ? (
                     <>
                       <span style={{ color, fontWeight: 'bold', fontSize: 14 }}>+{itemLevel}</span>
-                      <span style={{ color: '#888', fontSize: 9 }}>{getLevelTier(itemLevel)}</span>
+                      <span style={{ color: '#888', fontSize: 8 }}>⚔️{item.attack || 0}</span>
                     </>
                   ) : (
                     <span style={{ color: '#444', fontSize: 18 }}>-</span>
@@ -355,8 +354,15 @@ const EnhanceGame = () => {
         onClose={() => setShowBattle(false)}
         currentUser={user}
         userStats={user?.battleStats}
-        inventory={inventory.map((lvl, idx) => ({ id: idx, level: lvl }))}
-        getFriendsList={getFriendsList}
+        inventory={inventory.map((item, idx) => ({
+          id: idx,
+          level: item.level || item,
+          attack: item.attack || 0,
+          hp: item.hp || 0
+        }))}
+        currentItem={{ level, attack: itemStats.attack, hp: itemStats.hp }}
+        getRandomOpponents={getRandomOpponents}
+        saveBattleNotification={saveBattleNotification}
         onBattle={(result) => {
           updateBattleStats(result.won, result.reward);
           if (result.won) {
@@ -364,31 +370,49 @@ const EnhanceGame = () => {
           }
         }}
       />
+      <BattleNotificationModal
+        isOpen={showBattleNotifications}
+        notifications={battleNotifications}
+        onClose={() => setShowBattleNotifications(false)}
+        onMarkRead={(ids) => {
+          if (markBattleNotificationsRead) {
+            markBattleNotificationsRead(ids);
+          }
+          setBattleNotifications([]);
+        }}
+      />
+
+      {/* 하단 네비게이션 */}
+      <BottomNavigation
+        onShowFriend={() => setShowFriendPanel(true)}
+        onShowRanking={() => setShowRanking(true)}
+        onShowBattle={() => setShowBattle(true)}
+        onShowDailyReward={() => setShowDailyReward(true)}
+        onShowAchievement={() => setShowAchievement(true)}
+        onShowGuide={() => setShowGuide(true)}
+        onShowStats={() => setShowMobileStats(true)}
+        onToggleSound={() => { toggleMute(); setIsMuted(!isMuted); }}
+        onShare={handleShare}
+        onLogout={handleLogout}
+        isMuted={isMuted}
+        hasNotification={battleNotifications.length > 0}
+      />
     </div>
   );
 };
 
 const styles = {
-  container: { minHeight: '100vh', background: 'linear-gradient(180deg, #0a0a1a 0%, #151530 50%, #0a0a1a 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between', paddingTop: 70, paddingBottom: 20, paddingLeft: 20, paddingRight: 20, fontFamily: 'Noto Sans KR, sans-serif', position: 'relative', overflow: 'hidden' },
+  container: { minHeight: '100vh', background: 'linear-gradient(180deg, #0a0a1a 0%, #151530 50%, #0a0a1a 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between', paddingTop: 60, paddingBottom: 80, paddingLeft: 20, paddingRight: 20, fontFamily: 'Noto Sans KR, sans-serif', position: 'relative', overflow: 'hidden' },
   centerItem: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1, pointerEvents: 'none' },
   topUI: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, zIndex: 2 },
   bottomUI: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, zIndex: 2 },
   bgGlow: { position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: 500, height: 500, background: 'radial-gradient(circle, rgba(80,80,150,0.2) 0%, transparent 70%)', pointerEvents: 'none' },
-  topBar: { position: 'fixed', top: 0, left: 0, right: 0, display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 20px', backgroundColor: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(10px)', zIndex: 100 },
-  adminBtn: { padding: '8px 14px', backgroundColor: '#333', color: '#fff', border: '1px solid #555', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 'bold' },
-  userInfo: { display: 'flex', alignItems: 'center', gap: 10 },
-  profileImg: { width: 32, height: 32, borderRadius: '50%', border: '2px solid #FFD700' },
-  userName: { color: '#fff', fontSize: 14, fontWeight: 'bold' },
-  logoutBtn: { padding: '6px 12px', backgroundColor: '#F44336', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 12 },
-  shareBtn: { padding: '6px 12px', backgroundColor: '#FEE500', color: '#000', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 'bold' },
-  statsBtn: { padding: '6px 10px', backgroundColor: '#2196F3', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 14, alignItems: 'center', justifyContent: 'center' },
-  friendBtn: { padding: '6px 10px', backgroundColor: '#9C27B0', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 14 },
-  guideBtn: { padding: '6px 10px', backgroundColor: '#FF9800', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 14 },
-  dailyBtn: { padding: '6px 10px', backgroundColor: '#E91E63', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 14 },
-  achieveBtn: { padding: '6px 10px', backgroundColor: '#FFD700', color: '#000', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 14 },
-  rankBtn: { padding: '6px 10px', backgroundColor: '#00BCD4', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 14 },
-  battleBtn: { padding: '6px 10px', backgroundColor: '#F44336', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 14 },
-  soundBtn: { padding: '6px 10px', backgroundColor: '#607D8B', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 14 },
+  topBar: { position: 'fixed', top: 0, left: 0, right: 0, display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 16px', backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(10px)', zIndex: 100 },
+  topBarLeft: { display: 'flex', alignItems: 'center', gap: 10 },
+  topBarRight: { display: 'flex', alignItems: 'center', gap: 8 },
+  adminBtn: { padding: '6px 10px', backgroundColor: '#333', color: '#fff', border: '1px solid #555', borderRadius: 6, cursor: 'pointer', fontSize: 14 },
+  profileImg: { width: 28, height: 28, borderRadius: '50%', border: '2px solid #FFD700' },
+  userName: { color: '#fff', fontSize: 13, fontWeight: 'bold' },
   title: { color: '#FFD700', fontSize: '1.5rem', marginBottom: 5, marginTop: 0, textShadow: '0 0 30px rgba(255,215,0,0.6)', zIndex: 1 },
   uploadArea: { display: 'flex', gap: 10, marginBottom: 8, zIndex: 1 },
   uploadBtn: { padding: '8px 16px', backgroundColor: '#2a2a4a', color: '#FFF', borderRadius: 20, cursor: 'pointer', fontSize: 14, border: '1px solid #444' },
@@ -433,6 +457,8 @@ const styles = {
   priceLabel: { color: '#888' },
   priceCost: { color: '#FF6B6B', fontWeight: 'bold' },
   priceSell: { color: '#4CAF50', fontWeight: 'bold' },
+  statsRow: { display: 'flex', justifyContent: 'center', gap: 20, marginTop: 4 },
+  statLabel: { color: '#FFD700', fontSize: 14, fontWeight: 'bold' },
   buttonArea: { marginTop: 15, zIndex: 1 },
   buttonRow: { display: 'flex', gap: 15 },
   resetBtn: { padding: '16px 50px', fontSize: 18, fontWeight: 'bold', color: '#FFF', background: 'linear-gradient(145deg, #4CAF50, #388E3C)', border: 'none', borderRadius: 30, cursor: 'pointer' },

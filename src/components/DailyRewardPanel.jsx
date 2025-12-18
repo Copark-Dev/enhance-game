@@ -10,6 +10,18 @@ const DailyRewardPanel = ({ isOpen, onClose, user, onClaimReward }) => {
   useEffect(() => {
     if (!user) return;
 
+    // 한국시간(KST, UTC+9) 기준으로 날짜 계산
+    const getKSTDate = (date) => {
+      const kstOffset = 9 * 60; // KST는 UTC+9
+      const utc = date.getTime() + (date.getTimezoneOffset() * 60000);
+      return new Date(utc + (kstOffset * 60000));
+    };
+
+    const getKSTDateOnly = (date) => {
+      const kst = getKSTDate(date);
+      return new Date(kst.getFullYear(), kst.getMonth(), kst.getDate());
+    };
+
     const checkReward = () => {
       const lastClaim = user.lastDailyReward ? new Date(user.lastDailyReward) : null;
       const now = new Date();
@@ -20,10 +32,10 @@ const DailyRewardPanel = ({ isOpen, onClose, user, onClaimReward }) => {
         return;
       }
 
-      // 마지막 수령 날짜와 오늘 비교
-      const lastClaimDate = new Date(lastClaim.getFullYear(), lastClaim.getMonth(), lastClaim.getDate());
-      const todayDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      const diffDays = Math.floor((todayDate - lastClaimDate) / (1000 * 60 * 60 * 24));
+      // KST 기준으로 날짜 비교
+      const lastClaimKST = getKSTDateOnly(lastClaim);
+      const todayKST = getKSTDateOnly(now);
+      const diffDays = Math.floor((todayKST - lastClaimKST) / (1000 * 60 * 60 * 24));
 
       if (diffDays >= 1) {
         setCanClaim(true);
@@ -37,12 +49,14 @@ const DailyRewardPanel = ({ isOpen, onClose, user, onClaimReward }) => {
         setCanClaim(false);
         setStreak(user.dailyStreak || 0);
 
-        // 다음 보상까지 남은 시간
-        const tomorrow = new Date(todayDate);
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        const diff = tomorrow - now;
-        const hours = Math.floor(diff / (1000 * 60 * 60));
-        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        // 다음 보상까지 남은 시간 (KST 자정 기준)
+        const nowKST = getKSTDate(now);
+        // 오늘 KST 자정부터 지금까지 흐른 시간(분)
+        const elapsedMinutes = nowKST.getHours() * 60 + nowKST.getMinutes();
+        // 다음 KST 자정까지 남은 시간(분)
+        const remainingMinutes = 24 * 60 - elapsedMinutes;
+        const hours = Math.floor(remainingMinutes / 60);
+        const minutes = remainingMinutes % 60;
         setTimeUntilReset(`${hours}시간 ${minutes}분`);
       }
     };
@@ -109,10 +123,21 @@ const DailyRewardPanel = ({ isOpen, onClose, user, onClaimReward }) => {
 
           <div style={styles.rewardGrid}>
             {rewards.map((r) => {
-              // 7일 사이클로 표시 (8일차 이후는 다시 1일차부터)
-              const displayStreak = streak % 7;
-              const isClaimed = (streak >= r.day || (streak >= 7 && r.day <= displayStreak)) && !canClaim;
-              const isCurrent = canClaim && ((displayStreak + 1 === r.day) || (streak >= 6 && r.day === 7));
+              // 7일 사이클로 표시
+              const cycleProgress = streak % 7; // 0~6 (0은 7일차 완료 상태)
+
+              let isClaimed, isCurrent;
+              if (canClaim) {
+                // 오늘 아직 안 받음 - 다음에 받을 날짜 계산
+                const nextDay = cycleProgress + 1; // 1~7
+                isCurrent = r.day === nextDay;
+                isClaimed = r.day < nextDay;
+              } else {
+                // 오늘 이미 받음
+                const claimedUpTo = cycleProgress === 0 ? 7 : cycleProgress;
+                isClaimed = r.day <= claimedUpTo;
+                isCurrent = false;
+              }
               const isLocked = !isClaimed && !isCurrent;
 
               return (

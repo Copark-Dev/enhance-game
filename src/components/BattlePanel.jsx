@@ -2,10 +2,19 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatGold, getLevelColor, getItemImage, getLevelTier } from '../utils/constants';
 
-const BattlePanel = ({ isOpen, onClose, currentUser, userStats, inventory = [], onBattle, getFriendsList }) => {
-  const [opponents, setOpponents] = useState([]);
+const BattlePanel = ({
+  isOpen,
+  onClose,
+  userStats,
+  inventory = [],
+  currentItem, // 현재 강화중인 아이템 {level, attack, hp}
+  onBattle,
+  getRandomOpponents,
+  saveBattleNotification
+}) => {
   const [selectedItem, setSelectedItem] = useState(null);
-  const [selectedOpponent, setSelectedOpponent] = useState(null);
+  const [matchedOpponent, setMatchedOpponent] = useState(null);
+  const [isMatching, setIsMatching] = useState(false);
   const [battleResult, setBattleResult] = useState(null);
   const [isBattling, setIsBattling] = useState(false);
   const [battleLog, setBattleLog] = useState([]);
@@ -13,24 +22,25 @@ const BattlePanel = ({ isOpen, onClose, currentUser, userStats, inventory = [], 
   const [battleHistory, setBattleHistory] = useState([]);
 
   useEffect(() => {
-    if (isOpen && getFriendsList) {
-      loadOpponents();
-      loadHistory();
+    if (isOpen) {
+      // 히스토리 로드
+      const history = JSON.parse(localStorage.getItem('battleHistory') || '[]');
+      setBattleHistory(history.slice(0, 20));
+      // 현재 아이템이 있으면 자동 선택
+      if (currentItem && currentItem.level > 0) {
+        setSelectedItem({
+          id: 'current',
+          level: currentItem.level,
+          attack: currentItem.attack,
+          hp: currentItem.hp
+        });
+      }
     }
-  }, [isOpen]);
-
-  const loadOpponents = async () => {
-    try {
-      const friends = await getFriendsList();
-      setOpponents(friends || []);
-    } catch (error) {
-      console.error('Failed to load opponents:', error);
-    }
-  };
+  }, [isOpen, currentItem]);
 
   const loadHistory = () => {
     const history = JSON.parse(localStorage.getItem('battleHistory') || '[]');
-    setBattleHistory(history.slice(0, 20)); // 최근 20개만
+    setBattleHistory(history.slice(0, 20));
   };
 
   const saveBattleToHistory = (result) => {
@@ -43,41 +53,82 @@ const BattlePanel = ({ isOpen, onClose, currentUser, userStats, inventory = [], 
     setBattleHistory(history.slice(0, 20));
   };
 
-  // 전투력 계산
-  const calculatePower = (level) => {
-    const basePower = level * 100;
-    const levelBonus = Math.pow(level, 1.5) * 10;
-    return Math.floor(basePower + levelBonus);
+  // 아이템 스탯 기반 전투력 계산
+  const calculatePower = (item) => {
+    const attack = item?.attack || 0;
+    const hp = item?.hp || 0;
+    const level = item?.level || 0;
+    // 공격력 + HP/2 + 레벨 보너스
+    return Math.floor(attack + (hp / 2) + (level * 10));
+  };
+
+  // 아이템 스탯 기반 HP 계산
+  const calculateMaxHp = (item) => {
+    const baseHp = 100;
+    const itemHp = item?.hp || 0;
+    return baseHp + itemHp;
+  };
+
+  // 아이템 스탯 기반 공격력 계산
+  const calculateAttack = (item) => {
+    return item?.attack || 0;
   };
 
   // 크리티컬 확률 (레벨에 따라 증가)
   const getCritChance = (level) => {
-    return Math.min(5 + level * 2, 50); // 최대 50%
+    return Math.min(5 + level * 2, 50);
   };
 
-  // 회피 확률
-  const getDodgeChance = (level) => {
-    return Math.min(level * 1.5, 30); // 최대 30%
+  // 회피 확률 (HP 높을수록 증가)
+  const getDodgeChance = (item) => {
+    const hp = item?.hp || 0;
+    return Math.min(hp / 50, 25);
   };
 
-  // 배틀 시뮬레이션
+  // 랜덤 매칭
+  const startMatching = async () => {
+    if (!selectedItem || !getRandomOpponents) return;
+
+    setIsMatching(true);
+    setMatchedOpponent(null);
+
+    // 매칭 애니메이션 시간
+    await new Promise(resolve => setTimeout(resolve, 1500));
+
+    try {
+      const opponents = await getRandomOpponents(5);
+      if (opponents.length > 0) {
+        // 랜덤 선택
+        const randomIndex = Math.floor(Math.random() * opponents.length);
+        setMatchedOpponent(opponents[randomIndex]);
+      } else {
+        alert('매칭 가능한 상대가 없습니다. 나중에 다시 시도해주세요!');
+      }
+    } catch (error) {
+      console.error('매칭 실패:', error);
+    }
+
+    setIsMatching(false);
+  };
+
+  // 배틀 시뮬레이션 (아이템 스탯 기반)
   const simulateBattle = async () => {
-    if (!selectedItem || !selectedOpponent) return;
+    if (!selectedItem || !matchedOpponent) return;
 
     setIsBattling(true);
     setBattleResult(null);
     setBattleLog([]);
 
-    const myLevel = selectedItem.level;
-    const opponentLevel = selectedOpponent.stats?.maxLevel || 0;
+    const myItem = selectedItem;
+    const opponentItem = matchedOpponent.battleItem;
 
-    let myHp = 100 + myLevel * 20;
-    let opponentHp = 100 + opponentLevel * 20;
+    let myHp = calculateMaxHp(myItem);
+    let opponentHp = calculateMaxHp(opponentItem);
     const maxMyHp = myHp;
     const maxOpponentHp = opponentHp;
 
-    const myPower = calculatePower(myLevel);
-    const opponentPower = calculatePower(opponentLevel);
+    const myAttack = calculateAttack(myItem);
+    const opponentAttack = calculateAttack(opponentItem);
 
     const logs = [];
     let round = 0;
@@ -93,15 +144,15 @@ const BattlePanel = ({ isOpen, onClose, currentUser, userStats, inventory = [], 
       round++;
 
       // 내 턴
-      const myDodgeRoll = secureRandom() * 100;
+      const opponentDodgeRoll = secureRandom() * 100;
       const myCritRoll = secureRandom() * 100;
-      const opponentDodge = getDodgeChance(opponentLevel);
+      const opponentDodge = getDodgeChance(opponentItem);
 
-      if (myDodgeRoll < opponentDodge) {
+      if (opponentDodgeRoll < opponentDodge) {
         logs.push({ round, attacker: 'me', action: 'dodged', damage: 0 });
       } else {
-        let damage = Math.floor(myPower * (0.8 + secureRandom() * 0.4));
-        const isCrit = myCritRoll < getCritChance(myLevel);
+        let damage = Math.floor(myAttack * (0.8 + secureRandom() * 0.4));
+        const isCrit = myCritRoll < getCritChance(myItem.level);
         if (isCrit) {
           damage = Math.floor(damage * 1.5);
           logs.push({ round, attacker: 'me', action: 'critical', damage });
@@ -117,15 +168,15 @@ const BattlePanel = ({ isOpen, onClose, currentUser, userStats, inventory = [], 
       if (opponentHp <= 0) break;
 
       // 상대 턴
-      const oppDodgeRoll = secureRandom() * 100;
+      const myDodgeRoll = secureRandom() * 100;
       const oppCritRoll = secureRandom() * 100;
-      const myDodge = getDodgeChance(myLevel);
+      const myDodge = getDodgeChance(myItem);
 
-      if (oppDodgeRoll < myDodge) {
+      if (myDodgeRoll < myDodge) {
         logs.push({ round, attacker: 'opponent', action: 'dodged', damage: 0 });
       } else {
-        let damage = Math.floor(opponentPower * (0.8 + secureRandom() * 0.4));
-        const isCrit = oppCritRoll < getCritChance(opponentLevel);
+        let damage = Math.floor(opponentAttack * (0.8 + secureRandom() * 0.4));
+        const isCrit = oppCritRoll < getCritChance(opponentItem.level);
         if (isCrit) {
           damage = Math.floor(damage * 1.5);
           logs.push({ round, attacker: 'opponent', action: 'critical', damage });
@@ -140,13 +191,16 @@ const BattlePanel = ({ isOpen, onClose, currentUser, userStats, inventory = [], 
     }
 
     const won = myHp > opponentHp;
-    const reward = won ? Math.floor(1000 + opponentLevel * 500 + secureRandom() * 1000) : 0;
+    const reward = won ? Math.floor(1000 + opponentItem.level * 500 + secureRandom() * 1000) : 0;
 
     const result = {
       won,
-      myLevel,
-      opponentLevel,
-      opponentName: selectedOpponent.nickname,
+      myLevel: myItem.level,
+      myAttack: myItem.attack,
+      myHp: myItem.hp,
+      opponentLevel: opponentItem.level,
+      opponentName: matchedOpponent.nickname,
+      opponentId: matchedOpponent.id,
       reward,
       finalMyHp: Math.max(0, myHp),
       finalOpponentHp: Math.max(0, opponentHp),
@@ -158,6 +212,11 @@ const BattlePanel = ({ isOpen, onClose, currentUser, userStats, inventory = [], 
     setBattleResult(result);
     saveBattleToHistory(result);
 
+    // 상대에게 배틀 알림 저장
+    if (saveBattleNotification) {
+      await saveBattleNotification(matchedOpponent.id, result);
+    }
+
     if (onBattle) {
       onBattle(result);
     }
@@ -168,13 +227,31 @@ const BattlePanel = ({ isOpen, onClose, currentUser, userStats, inventory = [], 
   const resetBattle = () => {
     setBattleResult(null);
     setBattleLog([]);
-    setSelectedOpponent(null);
+    setMatchedOpponent(null);
+  };
+
+  const rematch = async () => {
+    setBattleResult(null);
+    setBattleLog([]);
+    await startMatching();
   };
 
   if (!isOpen) return null;
 
-  // 인벤토리에서 배틀 가능한 아이템
-  const battleItems = inventory.filter(item => item.level > 0);
+  // 배틀 가능한 아이템 목록 (현재 강화중 + 인벤토리)
+  const battleItems = [
+    ...(currentItem && currentItem.level > 0 ? [{
+      id: 'current',
+      level: currentItem.level,
+      attack: currentItem.attack,
+      hp: currentItem.hp,
+      isCurrent: true
+    }] : []),
+    ...inventory.filter(item => item.level > 0).map((item, idx) => ({
+      ...item,
+      id: `inv-${idx}`
+    }))
+  ];
 
   return (
     <AnimatePresence>
@@ -193,7 +270,7 @@ const BattlePanel = ({ isOpen, onClose, currentUser, userStats, inventory = [], 
           style={styles.modal}
         >
           <div style={styles.header}>
-            <h2 style={styles.title}>⚔️ 배틀</h2>
+            <h2 style={styles.title}>⚔️ 랜덤 배틀</h2>
             <button onClick={onClose} style={styles.closeBtn}>✕</button>
           </div>
 
@@ -267,14 +344,24 @@ const BattlePanel = ({ isOpen, onClose, currentUser, userStats, inventory = [], 
                     </div>
                   </div>
 
-                  <motion.button
-                    onClick={resetBattle}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    style={styles.actionBtn}
-                  >
-                    다시 대전하기
-                  </motion.button>
+                  <div style={styles.resultButtons}>
+                    <motion.button
+                      onClick={rematch}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      style={styles.actionBtn}
+                    >
+                      🔄 재매칭
+                    </motion.button>
+                    <motion.button
+                      onClick={resetBattle}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      style={styles.actionBtn}
+                    >
+                      🔙 돌아가기
+                    </motion.button>
+                  </div>
                 </div>
               ) : isBattling ? (
                 <div style={styles.battleScene}>
@@ -284,12 +371,18 @@ const BattlePanel = ({ isOpen, onClose, currentUser, userStats, inventory = [], 
                       <div style={{ color: getLevelColor(selectedItem?.level || 0) }}>
                         +{selectedItem?.level} {getLevelTier(selectedItem?.level)}
                       </div>
+                      <div style={styles.itemStatsSmall}>
+                        ⚔️{selectedItem?.attack} ❤️{selectedItem?.hp}
+                      </div>
                     </div>
                     <div style={styles.vs}>VS</div>
                     <div style={styles.fighter}>
                       <div style={styles.opponentIcon}>👤</div>
-                      <div style={{ color: getLevelColor(selectedOpponent?.stats?.maxLevel || 0) }}>
-                        +{selectedOpponent?.stats?.maxLevel || 0}
+                      <div style={{ color: getLevelColor(matchedOpponent?.battleItem?.level || 0) }}>
+                        +{matchedOpponent?.battleItem?.level || 0}
+                      </div>
+                      <div style={styles.itemStatsSmall}>
+                        ⚔️{matchedOpponent?.battleItem?.attack} ❤️{matchedOpponent?.battleItem?.hp}
                       </div>
                     </div>
                   </div>
@@ -305,12 +398,84 @@ const BattlePanel = ({ isOpen, onClose, currentUser, userStats, inventory = [], 
                           color: log.attacker === 'me' ? '#4CAF50' : '#F44336'
                         }}
                       >
-                        {log.attacker === 'me' ? '나' : selectedOpponent?.nickname}
+                        {log.attacker === 'me' ? '나' : matchedOpponent?.nickname}
                         {log.action === 'dodged' && ' 회피!'}
                         {log.action === 'attack' && ` 공격! -${log.damage}`}
                         {log.action === 'critical' && ` 크리티컬! -${log.damage}`}
                       </motion.div>
                     ))}
+                  </div>
+                </div>
+              ) : isMatching ? (
+                <div style={styles.matchingScene}>
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                    style={styles.matchingSpinner}
+                  >
+                    🎲
+                  </motion.div>
+                  <div style={styles.matchingText}>상대를 찾는 중...</div>
+                </div>
+              ) : matchedOpponent ? (
+                <div style={styles.matchedScene}>
+                  <div style={styles.matchedTitle}>🎯 상대 발견!</div>
+
+                  <div style={styles.matchedVersus}>
+                    <div style={styles.matchedCard}>
+                      <img src={getItemImage(selectedItem?.level || 0)} alt="" style={styles.matchedItemImg} />
+                      <div style={{ color: getLevelColor(selectedItem?.level || 0), fontSize: 14, fontWeight: 'bold' }}>
+                        +{selectedItem?.level} {getLevelTier(selectedItem?.level)}
+                      </div>
+                      <div style={styles.matchedStats}>
+                        <span>⚔️ {selectedItem?.attack}</span>
+                        <span>❤️ {selectedItem?.hp}</span>
+                      </div>
+                      <div style={styles.matchedPower}>
+                        전투력: {calculatePower(selectedItem)}
+                      </div>
+                    </div>
+
+                    <div style={styles.matchedVsText}>VS</div>
+
+                    <div style={styles.matchedCard}>
+                      <img
+                        src={matchedOpponent.profileImage || '/default-avatar.png'}
+                        alt=""
+                        style={styles.matchedAvatar}
+                        onError={(e) => { e.target.src = '/default-avatar.png'; }}
+                      />
+                      <div style={{ color: '#fff', fontWeight: 'bold' }}>{matchedOpponent.nickname}</div>
+                      <div style={{ color: getLevelColor(matchedOpponent.battleItem?.level || 0), fontSize: 14 }}>
+                        +{matchedOpponent.battleItem?.level || 0}
+                      </div>
+                      <div style={styles.matchedStats}>
+                        <span>⚔️ {matchedOpponent.battleItem?.attack}</span>
+                        <span>❤️ {matchedOpponent.battleItem?.hp}</span>
+                      </div>
+                      <div style={styles.matchedPower}>
+                        전투력: {calculatePower(matchedOpponent.battleItem)}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={styles.matchedButtons}>
+                    <motion.button
+                      onClick={simulateBattle}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      style={styles.battleBtn}
+                    >
+                      ⚔️ 배틀 시작!
+                    </motion.button>
+                    <motion.button
+                      onClick={startMatching}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      style={styles.rematchBtn}
+                    >
+                      🔄 다른 상대
+                    </motion.button>
                   </div>
                 </div>
               ) : (
@@ -333,12 +498,16 @@ const BattlePanel = ({ isOpen, onClose, currentUser, userStats, inventory = [], 
                               backgroundColor: selectedItem?.id === item.id ? 'rgba(255,215,0,0.2)' : 'rgba(255,255,255,0.05)'
                             }}
                           >
+                            {item.isCurrent && <div style={styles.currentBadge}>장착중</div>}
                             <img src={getItemImage(item.level)} alt="" style={styles.itemImg} />
                             <div style={{ color: getLevelColor(item.level), fontSize: 12, fontWeight: 'bold' }}>
                               +{item.level}
                             </div>
-                            <div style={{ fontSize: 10, color: '#888' }}>
-                              전투력: {calculatePower(item.level)}
+                            <div style={{ fontSize: 9, color: '#888' }}>
+                              ⚔️{item.attack} ❤️{item.hp}
+                            </div>
+                            <div style={{ fontSize: 10, color: '#aaa' }}>
+                              전투력: {calculatePower(item)}
                             </div>
                           </motion.div>
                         ))}
@@ -346,49 +515,16 @@ const BattlePanel = ({ isOpen, onClose, currentUser, userStats, inventory = [], 
                     )}
                   </div>
 
-                  <div style={styles.section}>
-                    <div style={styles.sectionTitle}>상대 선택 (친구 목록)</div>
-                    {opponents.length === 0 ? (
-                      <div style={styles.empty}>친구가 없습니다. 먼저 친구를 추가하세요!</div>
-                    ) : (
-                      <div style={styles.opponentList}>
-                        {opponents.map((opp) => (
-                          <motion.div
-                            key={opp.id}
-                            onClick={() => setSelectedOpponent(opp)}
-                            whileHover={{ scale: 1.02 }}
-                            style={{
-                              ...styles.opponentCard,
-                              borderColor: selectedOpponent?.id === opp.id ? '#FFD700' : '#333',
-                              backgroundColor: selectedOpponent?.id === opp.id ? 'rgba(255,215,0,0.2)' : 'rgba(255,255,255,0.05)'
-                            }}
-                          >
-                            <img
-                              src={opp.profileImage || '/default-avatar.png'}
-                              alt=""
-                              style={styles.oppAvatar}
-                              onError={(e) => { e.target.src = '/default-avatar.png'; }}
-                            />
-                            <div style={styles.oppInfo}>
-                              <div style={{ color: '#fff', fontWeight: 'bold' }}>{opp.nickname}</div>
-                              <div style={{ color: getLevelColor(opp.stats?.maxLevel || 0), fontSize: 12 }}>
-                                최고 +{opp.stats?.maxLevel || 0} | 전투력: {calculatePower(opp.stats?.maxLevel || 0)}
-                              </div>
-                            </div>
-                          </motion.div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {selectedItem && selectedOpponent && (
+                  {selectedItem && (
                     <motion.button
-                      onClick={simulateBattle}
+                      onClick={startMatching}
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
-                      style={styles.battleBtn}
+                      style={styles.matchBtn}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
                     >
-                      ⚔️ 배틀 시작!
+                      🎲 랜덤 매칭 시작
                     </motion.button>
                   )}
                 </>
@@ -419,7 +555,7 @@ const BattlePanel = ({ isOpen, onClose, currentUser, userStats, inventory = [], 
                       vs {battle.opponentName} (+{battle.opponentLevel})
                     </div>
                     <div style={{ color: '#888', fontSize: 11, marginTop: 2 }}>
-                      내 아이템: +{battle.myLevel} | {battle.rounds}라운드
+                      내 아이템: +{battle.myLevel} (⚔️{battle.myAttack || '-'} ❤️{battle.myHp || '-'}) | {battle.rounds}라운드
                       {battle.won && <span style={{ color: '#FFD700' }}> | +{formatGold(battle.reward)}G</span>}
                     </div>
                   </div>
@@ -524,39 +660,26 @@ const styles = {
     border: '2px solid',
     textAlign: 'center',
     cursor: 'pointer',
+    position: 'relative',
+  },
+  currentBadge: {
+    position: 'absolute',
+    top: -8,
+    left: '50%',
+    transform: 'translateX(-50%)',
+    backgroundColor: '#FFD700',
+    color: '#000',
+    fontSize: 8,
+    padding: '2px 6px',
+    borderRadius: 4,
+    fontWeight: 'bold',
   },
   itemImg: {
     width: 40,
     height: 40,
     objectFit: 'contain',
   },
-  opponentList: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 8,
-    maxHeight: 150,
-    overflowY: 'auto',
-  },
-  opponentCard: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 12,
-    padding: 10,
-    borderRadius: 10,
-    border: '2px solid',
-    cursor: 'pointer',
-  },
-  oppAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: '50%',
-    objectFit: 'cover',
-    backgroundColor: '#333',
-  },
-  oppInfo: {
-    flex: 1,
-  },
-  battleBtn: {
+  matchBtn: {
     width: '100%',
     padding: 14,
     backgroundColor: '#FF6B6B',
@@ -565,6 +688,101 @@ const styles = {
     borderRadius: 12,
     fontSize: 16,
     fontWeight: 'bold',
+    cursor: 'pointer',
+  },
+  matchingScene: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 40,
+  },
+  matchingSpinner: {
+    fontSize: 60,
+    marginBottom: 16,
+  },
+  matchingText: {
+    color: '#fff',
+    fontSize: 18,
+  },
+  matchedScene: {
+    padding: 10,
+  },
+  matchedTitle: {
+    textAlign: 'center',
+    color: '#FFD700',
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 16,
+  },
+  matchedVersus: {
+    display: 'flex',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  matchedCard: {
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 12,
+    padding: 12,
+    textAlign: 'center',
+    minWidth: 100,
+  },
+  matchedItemImg: {
+    width: 50,
+    height: 50,
+    objectFit: 'contain',
+    marginBottom: 8,
+  },
+  matchedAvatar: {
+    width: 50,
+    height: 50,
+    borderRadius: '50%',
+    objectFit: 'cover',
+    backgroundColor: '#333',
+    marginBottom: 8,
+  },
+  matchedStats: {
+    display: 'flex',
+    justifyContent: 'center',
+    gap: 8,
+    fontSize: 11,
+    color: '#aaa',
+    marginTop: 4,
+  },
+  matchedPower: {
+    fontSize: 10,
+    color: '#FFD700',
+    marginTop: 4,
+  },
+  matchedVsText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#FF6B6B',
+  },
+  matchedButtons: {
+    display: 'flex',
+    gap: 10,
+  },
+  battleBtn: {
+    flex: 2,
+    padding: 14,
+    backgroundColor: '#FF6B6B',
+    color: '#fff',
+    border: 'none',
+    borderRadius: 12,
+    fontSize: 16,
+    fontWeight: 'bold',
+    cursor: 'pointer',
+  },
+  rematchBtn: {
+    flex: 1,
+    padding: 14,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    color: '#fff',
+    border: '1px solid #444',
+    borderRadius: 12,
+    fontSize: 14,
     cursor: 'pointer',
   },
   battleScene: {
@@ -587,6 +805,10 @@ const styles = {
   opponentIcon: {
     fontSize: 50,
     marginBottom: 5,
+  },
+  itemStatsSmall: {
+    fontSize: 10,
+    color: '#888',
   },
   vs: {
     fontSize: 24,
@@ -612,6 +834,10 @@ const styles = {
     border: '2px solid',
     marginBottom: 16,
   },
+  resultButtons: {
+    display: 'flex',
+    gap: 10,
+  },
   battleStats: {
     marginBottom: 16,
   },
@@ -635,7 +861,7 @@ const styles = {
     transition: 'width 0.3s',
   },
   actionBtn: {
-    width: '100%',
+    flex: 1,
     padding: 14,
     backgroundColor: 'rgba(255,255,255,0.1)',
     color: '#fff',

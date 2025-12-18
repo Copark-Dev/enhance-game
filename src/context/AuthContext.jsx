@@ -10,6 +10,85 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // 함수들을 useEffect 전에 선언
+  const saveUserToFirestore = async (kakaoUser) => {
+    const userRef = doc(db, 'users', kakaoUser.id);
+
+    try {
+      const userSnap = await getDoc(userRef);
+      let userData;
+
+      if (userSnap.exists()) {
+        await updateDoc(userRef, {
+          nickname: kakaoUser.nickname,
+          profileImage: kakaoUser.profileImage,
+          lastLogin: new Date().toISOString(),
+        });
+        userData = { ...kakaoUser, ...userSnap.data() };
+      } else {
+        userData = {
+          ...kakaoUser,
+          gold: 50000,
+          stats: { attempts: 0, successes: 0, failures: 0, maxLevel: 0, totalSpent: 0, totalEarned: 0 },
+          createdAt: new Date().toISOString(),
+          lastLogin: new Date().toISOString(),
+        };
+        // email도 저장
+        if (kakaoUser.email) {
+          userData.email = kakaoUser.email;
+        }
+        await setDoc(userRef, userData);
+      }
+
+      setUser(userData);
+      localStorage.setItem('kakaoUser', JSON.stringify(userData));
+    } catch (dbErr) {
+      console.error('Firestore 오류:', dbErr);
+      const localData = {
+        ...kakaoUser,
+        gold: 50000,
+        stats: { attempts: 0, successes: 0, failures: 0, maxLevel: 0, totalSpent: 0, totalEarned: 0 },
+      };
+      setUser(localData);
+      localStorage.setItem('kakaoUser', JSON.stringify(localData));
+    }
+    setLoading(false);
+  };
+
+  const fetchKakaoUser = async () => {
+    try {
+      const res = await window.Kakao.API.request({
+        url: '/v2/user/me',
+      });
+      const kakaoUser = {
+        id: res.id.toString(),
+        nickname: res.properties?.nickname || '사용자',
+        profileImage: res.properties?.profile_image || null,
+        email: res.kakao_account?.email || null,
+      };
+      await saveUserToFirestore(kakaoUser);
+    } catch (err) {
+      console.error('카카오 API 오류:', err);
+      setLoading(false);
+    }
+  };
+
+  const syncUserData = async (userId) => {
+    try {
+      const userRef = doc(db, 'users', userId);
+      const userSnap = await getDoc(userRef);
+      if (userSnap.exists()) {
+        const firebaseData = userSnap.data();
+        const localData = JSON.parse(localStorage.getItem('kakaoUser'));
+        const merged = { ...localData, ...firebaseData };
+        setUser(merged);
+        localStorage.setItem('kakaoUser', JSON.stringify(merged));
+      }
+    } catch (_err) {
+      console.log('동기화 스킵');
+    }
+  };
+
   useEffect(() => {
     // 카카오 SDK 초기화
     const kakaoKey = import.meta.env.VITE_KAKAO_JS_KEY;
@@ -57,90 +136,12 @@ export const AuthProvider = ({ children }) => {
         const parsed = JSON.parse(savedUser);
         setUser(parsed);
         syncUserData(parsed.id);
-      } catch (e) {
+      } catch (_e) {
         localStorage.removeItem('kakaoUser');
       }
     }
     setLoading(false);
   }, []);
-
-  const fetchKakaoUser = async () => {
-    try {
-      const res = await window.Kakao.API.request({
-        url: '/v2/user/me',
-      });
-      const kakaoUser = {
-        id: res.id.toString(),
-        nickname: res.properties?.nickname || '사용자',
-        profileImage: res.properties?.profile_image || null,
-        email: res.kakao_account?.email || null,
-      };
-      await saveUserToFirestore(kakaoUser);
-    } catch (err) {
-      console.error('카카오 API 오류:', err);
-      setLoading(false);
-    }
-  };
-
-  const saveUserToFirestore = async (kakaoUser) => {
-    const userRef = doc(db, 'users', kakaoUser.id);
-    
-    try {
-      const userSnap = await getDoc(userRef);
-      let userData;
-      
-      if (userSnap.exists()) {
-        await updateDoc(userRef, {
-          nickname: kakaoUser.nickname,
-          profileImage: kakaoUser.profileImage,
-          lastLogin: new Date().toISOString(),
-        });
-        userData = { ...kakaoUser, ...userSnap.data() };
-      } else {
-        userData = {
-          ...kakaoUser,
-          gold: 50000,
-          stats: { attempts: 0, successes: 0, failures: 0, maxLevel: 0, totalSpent: 0, totalEarned: 0 },
-          createdAt: new Date().toISOString(),
-          lastLogin: new Date().toISOString(),
-        };
-        // email도 저장
-        if (kakaoUser.email) {
-          userData.email = kakaoUser.email;
-        }
-        await setDoc(userRef, userData);
-      }
-
-      setUser(userData);
-      localStorage.setItem('kakaoUser', JSON.stringify(userData));
-    } catch (dbErr) {
-      console.error('Firestore 오류:', dbErr);
-      const localData = {
-        ...kakaoUser,
-        gold: 50000,
-        stats: { attempts: 0, successes: 0, failures: 0, maxLevel: 0, totalSpent: 0, totalEarned: 0 },
-      };
-      setUser(localData);
-      localStorage.setItem('kakaoUser', JSON.stringify(localData));
-    }
-    setLoading(false);
-  };
-
-  const syncUserData = async (userId) => {
-    try {
-      const userRef = doc(db, 'users', userId);
-      const userSnap = await getDoc(userRef);
-      if (userSnap.exists()) {
-        const firebaseData = userSnap.data();
-        const localData = JSON.parse(localStorage.getItem('kakaoUser'));
-        const merged = { ...localData, ...firebaseData };
-        setUser(merged);
-        localStorage.setItem('kakaoUser', JSON.stringify(merged));
-      }
-    } catch (err) {
-      console.log('동기화 스킵');
-    }
-  };
 
   const loginWithKakao = () => {
     if (!window.Kakao) {
@@ -375,11 +376,113 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // 랜덤 매칭용 상대 목록 가져오기
+  const getRandomOpponents = async (count = 5) => {
+    if (!user) return [];
+    try {
+      const usersRef = collection(db, 'users');
+      const querySnapshot = await getDocs(query(usersRef, limit(50)));
+      const users = [];
+      querySnapshot.forEach((docSnap) => {
+        if (docSnap.id !== user.id) {
+          const data = docSnap.data();
+          // 배틀 가능한 아이템이 있는 유저만 (maxLevel > 0)
+          if (data.stats?.maxLevel > 0) {
+            users.push({
+              id: docSnap.id,
+              nickname: data.nickname || '익명',
+              profileImage: data.profileImage,
+              stats: data.stats,
+              // 배틀용 아이템 정보 (최고 레벨 기반으로 추정)
+              battleItem: {
+                level: data.stats?.maxLevel || 0,
+                attack: (data.stats?.maxLevel || 0) * 50,
+                hp: (data.stats?.maxLevel || 0) * 100
+              }
+            });
+          }
+        }
+      });
+      // 랜덤 셔플 후 count개만 반환
+      const shuffled = users.sort(() => Math.random() - 0.5);
+      return shuffled.slice(0, count);
+    } catch (err) {
+      console.error('랜덤 상대 로드 실패:', err);
+      return [];
+    }
+  };
+
+  // 배틀 결과 저장 (상대방에게 알림)
+  const saveBattleNotification = async (opponentId, battleResult) => {
+    if (!user) return false;
+    try {
+      const notificationRef = doc(collection(db, 'battleNotifications'));
+      await setDoc(notificationRef, {
+        recipientId: opponentId,
+        attackerId: user.id,
+        attackerName: user.nickname,
+        attackerImage: user.profileImage,
+        attackerWon: battleResult.won, // 공격자 기준 승패
+        attackerLevel: battleResult.myLevel,
+        attackerAttack: battleResult.myAttack || 0,
+        attackerHp: battleResult.myHp || 0,
+        defenderLevel: battleResult.opponentLevel,
+        reward: battleResult.reward,
+        rounds: battleResult.rounds,
+        timestamp: new Date().toISOString(),
+        read: false
+      });
+      return true;
+    } catch (err) {
+      console.error('배틀 알림 저장 실패:', err);
+      return false;
+    }
+  };
+
+  // 배틀 알림 가져오기
+  const getBattleNotifications = async () => {
+    if (!user) return [];
+    try {
+      const notificationsRef = collection(db, 'battleNotifications');
+      const q = query(
+        notificationsRef,
+        where('recipientId', '==', user.id),
+        where('read', '==', false),
+        orderBy('timestamp', 'desc'),
+        limit(20)
+      );
+      const querySnapshot = await getDocs(q);
+      const notifications = [];
+      querySnapshot.forEach((docSnap) => {
+        notifications.push({ id: docSnap.id, ...docSnap.data() });
+      });
+      return notifications;
+    } catch (err) {
+      console.error('배틀 알림 로드 실패:', err);
+      return [];
+    }
+  };
+
+  // 배틀 알림 읽음 처리
+  const markBattleNotificationsRead = async (notificationIds) => {
+    try {
+      for (const notifId of notificationIds) {
+        const notifRef = doc(db, 'battleNotifications', notifId);
+        await updateDoc(notifRef, { read: true });
+      }
+      return true;
+    } catch (err) {
+      console.error('배틀 알림 읽음 처리 실패:', err);
+      return false;
+    }
+  };
+
   return (
     <AuthContext.Provider value={{
       user, loading, loginWithKakao, logout, updateUserData,
       searchUserByNickname, addFriend, removeFriend, getFriendsList, sendGold,
-      getRankings, claimDailyReward, claimAchievement, updateBattleStats
+      getRankings, claimDailyReward, claimAchievement, updateBattleStats,
+      getRandomOpponents, saveBattleNotification, getBattleNotifications, markBattleNotificationsRead
     }}>
       {children}
     </AuthContext.Provider>
