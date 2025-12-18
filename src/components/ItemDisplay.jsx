@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { getLevelColor, getLevelTier, MAX_LEVEL, getItemImage } from '../utils/constants';
 
 const ItemDisplay = ({ level, isEnhancing, result, isDestroyed }) => {
   const color = getLevelColor(level);
   const tier = getLevelTier(level);
   const [imageError, setImageError] = useState(false);
+  const [showModal, setShowModal] = useState(false);
   const itemImage = getItemImage(level);
 
   useEffect(() => {
@@ -178,22 +179,24 @@ const ItemDisplay = ({ level, isEnhancing, result, isDestroyed }) => {
           }}
           transition={{ duration: 0.3 }}
           className="item-image"
+          onClick={() => !isDestroyed && setShowModal(true)}
           style={{
             borderRadius: 16,
-            backgroundColor: 'rgba(0,0,0,0.4)',
+            backgroundColor: 'rgba(0,0,0,0.2)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             zIndex: 15,
             overflow: 'hidden',
             border: `2px solid ${isDestroyed ? '#222' : color}44`,
+            cursor: isDestroyed ? 'default' : 'pointer',
           }}
         >
           {!imageError && !isDestroyed ? (
             <img
               src={itemImage}
               alt='item'
-              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              style={{ width: '100%', height: '100%', objectFit: 'contain' }}
               onError={() => setImageError(true)}
             />
           ) : (
@@ -254,6 +257,88 @@ const ItemDisplay = ({ level, isEnhancing, result, isDestroyed }) => {
           }}
         />
       )}
+
+      {/* 이미지 확대 모달 */}
+      <AnimatePresence>
+        {showModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setShowModal(false)}
+            style={{
+              position: 'fixed',
+              inset: 0,
+              backgroundColor: 'rgba(0,0,0,0.9)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 9999,
+              cursor: 'pointer',
+              pointerEvents: 'auto',
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.5, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.5, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                position: 'relative',
+                padding: 20,
+                background: `linear-gradient(145deg, #1a1a3a, #0a0a2a)`,
+                borderRadius: 24,
+                border: `3px solid ${color}`,
+                boxShadow: `0 0 60px ${color}`,
+              }}
+            >
+              <img
+                src={itemImage}
+                alt='item'
+                style={{
+                  width: '70vmin',
+                  height: '70vmin',
+                  maxWidth: 500,
+                  maxHeight: 500,
+                  objectFit: 'contain',
+                  borderRadius: 16,
+                }}
+              />
+              <div style={{
+                textAlign: 'center',
+                marginTop: 16,
+                color: color,
+                fontSize: 32,
+                fontWeight: 'bold',
+                textShadow: `0 0 20px ${color}`,
+              }}>
+                +{level} {tier}
+              </div>
+              <button
+                onClick={() => setShowModal(false)}
+                style={{
+                  position: 'absolute',
+                  top: -15,
+                  right: -15,
+                  width: 40,
+                  height: 40,
+                  borderRadius: '50%',
+                  backgroundColor: '#333',
+                  color: '#fff',
+                  border: '2px solid #555',
+                  fontSize: 20,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                ✕
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

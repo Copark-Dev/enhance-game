@@ -20,6 +20,7 @@ const EnhanceGame = () => {
     canEnhance, enhance, sell, reset, addGold, setResult, setGold, setStats
   } = useEnhance(0, user?.gold || 50000);
 
+  const [showMobileStats, setShowMobileStats] = useState(false);
   const sellRange = SELL_PRICE[level] || { min: 0, max: 0 };
 
   // 유저 데이터로 초기화
@@ -113,6 +114,9 @@ const EnhanceGame = () => {
         <div style={styles.userInfo} className="user-info">
           {user?.profileImage && <img src={user.profileImage} alt='profile' style={styles.profileImg} className="profile-img" />}
           <span style={styles.userName} className="user-name">{user?.nickname || '사용자'}</span>
+          <motion.button onClick={() => setShowMobileStats(true)} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} style={styles.statsBtn} className="mobile-stats-btn">
+            📊
+          </motion.button>
           <motion.button onClick={handleShare} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} style={styles.shareBtn}>
             📤 공유
           </motion.button>
@@ -134,8 +138,18 @@ const EnhanceGame = () => {
       <div style={styles.topUI}>
         <motion.h1 initial={{ y: -30, opacity: 0 }} animate={{ y: 0, opacity: 1 }} style={styles.title} className="game-title">⚔️ 강화 시뮬레이터</motion.h1>
         <div style={styles.goldArea} className="gold-area">
-          <span style={styles.goldIcon}>🪙</span>
+          <div style={styles.coinIcon}>
+            <span style={styles.coinInner}>G</span>
+          </div>
           <span style={styles.goldAmount} className="gold-amount">{formatGold(gold)}</span>
+          <motion.button
+            onClick={() => addGold(5)}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            style={styles.grindBtn}
+          >
+            ⛏️ +5
+          </motion.button>
         </div>
       </div>
 
@@ -168,7 +182,7 @@ const EnhanceGame = () => {
         {gold < enhanceCost && !isDestroyed && level < MAX_LEVEL && <div style={styles.warning}>⚠️ 골드 부족! (필요: {formatGold(enhanceCost)}G)</div>}
       </div>
 
-      <StatsPanel stats={stats} gold={gold} />
+      <StatsPanel stats={stats} gold={gold} isMobileOpen={showMobileStats} onClose={() => setShowMobileStats(false)} />
       <ResultOverlay result={result} level={level} lastSellPrice={lastSellPrice} isNewRecord={isNewRecord} />
     </div>
   );
@@ -187,13 +201,44 @@ const styles = {
   userName: { color: '#fff', fontSize: 14, fontWeight: 'bold' },
   logoutBtn: { padding: '6px 12px', backgroundColor: '#F44336', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 12 },
   shareBtn: { padding: '6px 12px', backgroundColor: '#FEE500', color: '#000', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 'bold' },
+  statsBtn: { padding: '6px 10px', backgroundColor: '#2196F3', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 14, alignItems: 'center', justifyContent: 'center' },
   title: { color: '#FFD700', fontSize: '1.5rem', marginBottom: 5, marginTop: 0, textShadow: '0 0 30px rgba(255,215,0,0.6)', zIndex: 1 },
   uploadArea: { display: 'flex', gap: 10, marginBottom: 8, zIndex: 1 },
   uploadBtn: { padding: '8px 16px', backgroundColor: '#2a2a4a', color: '#FFF', borderRadius: 20, cursor: 'pointer', fontSize: 14, border: '1px solid #444' },
   removeBtn: { padding: '8px 12px', backgroundColor: '#F44336', color: '#FFF', border: 'none', borderRadius: 20, cursor: 'pointer' },
   goldArea: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18, zIndex: 1 },
-  goldIcon: { fontSize: 28 },
+  coinIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: '50%',
+    background: 'linear-gradient(145deg, #FFD700, #FFA500)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    boxShadow: '0 2px 8px rgba(255,215,0,0.5), inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.3)',
+    border: '2px solid #DAA520',
+  },
+  coinInner: {
+    color: '#8B4513',
+    fontSize: 18,
+    fontWeight: 'bold',
+    textShadow: '0 1px 0 rgba(255,255,255,0.4)',
+    fontFamily: 'serif',
+  },
   goldAmount: { color: '#FFD700', fontSize: 26, fontWeight: 'bold', textShadow: '0 0 10px rgba(255,215,0,0.5)', minWidth: 100 },
+  grindBtn: {
+    padding: '6px 12px',
+    background: 'linear-gradient(145deg, #4a4a6a, #2a2a4a)',
+    color: '#FFD700',
+    border: '1px solid #666',
+    borderRadius: 8,
+    cursor: 'pointer',
+    fontSize: 13,
+    fontWeight: 'bold',
+    display: 'flex',
+    alignItems: 'center',
+    gap: 4,
+  },
   addBtn: { padding: '6px 12px', backgroundColor: '#FFD700', color: '#000', border: 'none', borderRadius: 15, cursor: 'pointer', fontSize: 13, fontWeight: 'bold' },
   itemArea: { position: 'relative', width: 280, height: 280, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 10, zIndex: 1 },
   priceInfo: { display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 15, padding: '12px 20px', backgroundColor: 'rgba(0,0,0,0.4)', borderRadius: 12, zIndex: 1 },

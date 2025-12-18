@@ -23,30 +23,30 @@ button:active { transform: translateY(0); }
   padding: 70px 20px 20px;
 }
 
-/* 아이템 관련 기본 스타일 */
+/* 아이템 관련 기본 스타일 - 크게! */
 .item-container {
-  width: 320px;
-  height: 320px;
+  width: 400px;
+  height: 400px;
 }
 
 .item-box {
-  width: 260px;
-  height: 260px;
-  padding: 15px;
+  width: 340px;
+  height: 340px;
+  padding: 12px;
 }
 
 .item-image {
-  width: 180px;
-  height: 180px;
+  width: 280px;
+  height: 280px;
 }
 
 .item-emoji {
-  font-size: 90px;
+  font-size: 120px;
 }
 
 .item-level {
-  font-size: 32px;
-  margin-top: 8px;
+  font-size: 36px;
+  margin-top: 6px;
 }
 
 /* 모바일 반응형 */
@@ -94,30 +94,30 @@ button:active { transform: translateY(0); }
     font-size: 18px !important;
   }
 
-  /* 아이템 크기 조정 - 태블릿 */
+  /* 아이템 크기 조정 - 태블릿 (더 크게!) */
   .item-container {
-    width: 280px;
-    height: 280px;
+    width: 360px;
+    height: 360px;
   }
 
   .item-box {
-    width: 220px;
-    height: 220px;
-    padding: 12px;
+    width: 300px;
+    height: 300px;
+    padding: 10px;
   }
 
   .item-image {
-    width: 150px;
-    height: 150px;
+    width: 250px;
+    height: 250px;
   }
 
   .item-emoji {
-    font-size: 75px;
+    font-size: 100px;
   }
 
   .item-level {
-    font-size: 26px;
-    margin-top: 6px;
+    font-size: 30px;
+    margin-top: 5px;
   }
 
   .price-info {
@@ -154,32 +154,32 @@ button:active { transform: translateY(0); }
     font-size: 16px !important;
   }
 
-  /* 아이템 크기 조정 - 모바일 */
+  /* 아이템 크기 조정 - 모바일 (더 크게!) */
   .item-container {
-    width: 240px;
-    height: 240px;
+    width: 320px;
+    height: 320px;
   }
 
   .item-box {
-    width: 190px;
-    height: 190px;
-    padding: 10px;
+    width: 280px;
+    height: 280px;
+    padding: 8px;
     border-radius: 20px !important;
   }
 
   .item-image {
-    width: 130px;
-    height: 130px;
+    width: 230px;
+    height: 230px;
     border-radius: 12px !important;
   }
 
   .item-emoji {
-    font-size: 65px;
+    font-size: 90px;
   }
 
   .item-level {
-    font-size: 22px;
-    margin-top: 5px;
+    font-size: 26px;
+    margin-top: 4px;
   }
 
   .price-info {
@@ -198,29 +198,40 @@ button:active { transform: translateY(0); }
   }
 }
 
-/* 아주 작은 화면 */
+/* 아주 작은 화면 (더 크게!) */
 @media (max-width: 360px) {
   .item-container {
-    width: 200px;
-    height: 200px;
+    width: 280px;
+    height: 280px;
   }
 
   .item-box {
-    width: 160px;
-    height: 160px;
-    padding: 8px;
+    width: 250px;
+    height: 250px;
+    padding: 6px;
   }
 
   .item-image {
-    width: 110px;
-    height: 110px;
+    width: 210px;
+    height: 210px;
   }
 
   .item-emoji {
-    font-size: 55px;
+    font-size: 80px;
   }
 
   .item-level {
-    font-size: 18px;
+    font-size: 22px;
+  }
+}
+
+/* 모바일 통계 버튼 - 데스크탑에서 숨김 */
+.mobile-stats-btn {
+  display: none !important;
+}
+
+@media (max-width: 768px) {
+  .mobile-stats-btn {
+    display: flex !important;
   }
 }
