@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { db, requestFCMToken, onForegroundMessage } from '../utils/firebase';
-import { doc, getDoc, setDoc, updateDoc, collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, collection, query, where, getDocs, orderBy, limit, onSnapshot } from 'firebase/firestore';
 
 const AuthContext = createContext();
 
@@ -9,6 +9,34 @@ export const useAuth = () => useContext(AuthContext);
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  // 🔥 실시간 리스너 해제 함수 저장
+  const [unsubscribeUser, setUnsubscribeUser] = useState(null);
+
+  // 🔥 실시간 유저 데이터 구독 시작
+  const startUserListener = (userId) => {
+    // 기존 리스너 해제
+    if (unsubscribeUser) {
+      unsubscribeUser();
+    }
+
+    const userRef = doc(db, 'users', userId);
+    const unsubscribe = onSnapshot(userRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const firebaseData = docSnap.data();
+        setUser(prev => {
+          // 기존 로컬 데이터와 Firebase 데이터 병합
+          const merged = { ...prev, ...firebaseData, id: userId };
+          localStorage.setItem('kakaoUser', JSON.stringify(merged));
+          return merged;
+        });
+      }
+    }, (error) => {
+      console.error('실시간 리스너 오류:', error);
+    });
+
+    setUnsubscribeUser(() => unsubscribe);
+  };
 
   // 함수들을 useEffect 전에 선언
   const saveUserToFirestore = async (kakaoUser) => {
@@ -42,6 +70,10 @@ export const AuthProvider = ({ children }) => {
 
       setUser(userData);
       localStorage.setItem('kakaoUser', JSON.stringify(userData));
+
+      // 🔥 실시간 리스너 시작
+      startUserListener(kakaoUser.id);
+
     } catch (dbErr) {
       console.error('Firestore 오류:', dbErr);
       const localData = {
@@ -83,6 +115,9 @@ export const AuthProvider = ({ children }) => {
         const merged = { ...localData, ...firebaseData };
         setUser(merged);
         localStorage.setItem('kakaoUser', JSON.stringify(merged));
+
+        // 🔥 실시간 리스너 시작
+        startUserListener(userId);
       }
     } catch (_err) {
       console.log('동기화 스킵');
@@ -141,6 +176,13 @@ export const AuthProvider = ({ children }) => {
       }
     }
     setLoading(false);
+
+    // 🔥 컴포넌트 언마운트 시 리스너 해제
+    return () => {
+      if (unsubscribeUser) {
+        unsubscribeUser();
+      }
+    };
   }, []);
 
   const loginWithKakao = () => {
@@ -159,6 +201,12 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
+    // 🔥 리스너 해제
+    if (unsubscribeUser) {
+      unsubscribeUser();
+      setUnsubscribeUser(null);
+    }
+
     if (window.Kakao && window.Kakao.Auth.getAccessToken()) {
       window.Kakao.Auth.logout();
     }
@@ -169,15 +217,16 @@ export const AuthProvider = ({ children }) => {
   const updateUserData = async (data) => {
     if (!user) return;
 
-    const updatedUser = { ...user, ...data };
-    setUser(updatedUser);
-    localStorage.setItem('kakaoUser', JSON.stringify(updatedUser));
-
+    // 🔥 로컬 상태는 실시간 리스너가 업데이트하므로 Firebase만 업데이트
     try {
       const userRef = doc(db, 'users', user.id);
       await updateDoc(userRef, data);
     } catch (err) {
-      console.log('Firestore 업데이트 실패');
+      console.log('Firestore 업데이트 실패:', err);
+      // 실패 시 로컬만 업데이트
+      const updatedUser = { ...user, ...data };
+      setUser(updatedUser);
+      localStorage.setItem('kakaoUser', JSON.stringify(updatedUser));
     }
   };
 
