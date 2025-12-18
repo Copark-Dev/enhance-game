@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { useImages } from '../context/ImageContext';
 import { useAuth } from '../context/AuthContext';
-import { getLevelColor, getLevelTier, formatGold } from '../utils/constants';
+import { getLevelColor, getLevelTier, formatGold, getItemImage, SUCCESS_RATES, DOWNGRADE_RATES, DESTROY_RATES, ENHANCE_COST } from '../utils/constants';
 import { db } from '../utils/firebase';
-import { collection, getDocs, doc, updateDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, updateDoc, getDoc, setDoc } from 'firebase/firestore';
 
 const ADMIN_EMAIL = 'psw4887@naver.com';
 const ADMIN_NICKNAME = '박세완';
@@ -15,12 +14,21 @@ const isAdmin = (user) => user?.email === ADMIN_EMAIL || user?.nickname === ADMI
 const AdminPage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { levelImages, setImageForLevel, removeImageForLevel, clearAllImages } = useImages();
-  const [activeTab, setActiveTab] = useState('images');
+  const [activeTab, setActiveTab] = useState('settings');
   const [users, setUsers] = useState([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [editGold, setEditGold] = useState('');
+
+  // 강화 설정 상태
+  const [settings, setSettings] = useState({
+    successRates: { ...SUCCESS_RATES },
+    downgradeRates: { ...DOWNGRADE_RATES },
+    destroyRates: { ...DESTROY_RATES },
+    enhanceCosts: { ...ENHANCE_COST },
+  });
+  const [editingLevel, setEditingLevel] = useState(null);
+  const [savingSettings, setSavingSettings] = useState(false);
 
   // 어드민 체크
   useEffect(() => {
@@ -28,6 +36,28 @@ const AdminPage = () => {
       navigate('/');
     }
   }, [user, navigate]);
+
+  // Firebase에서 설정 불러오기
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const settingsRef = doc(db, 'settings', 'enhance');
+        const snapshot = await getDoc(settingsRef);
+        if (snapshot.exists()) {
+          const data = snapshot.data();
+          setSettings({
+            successRates: data.successRates || { ...SUCCESS_RATES },
+            downgradeRates: data.downgradeRates || { ...DOWNGRADE_RATES },
+            destroyRates: data.destroyRates || { ...DESTROY_RATES },
+            enhanceCosts: data.enhanceCosts || { ...ENHANCE_COST },
+          });
+        }
+      } catch (err) {
+        console.error('설정 불러오기 실패:', err);
+      }
+    };
+    fetchSettings();
+  }, []);
 
   // 유저 목록 불러오기
   const fetchUsers = async () => {
@@ -49,17 +79,6 @@ const AdminPage = () => {
     }
   }, [activeTab]);
 
-  const handleImageUpload = (level, e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        setImageForLevel(level, event.target.result);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
   const handleUpdateGold = async (userId) => {
     const newGold = parseInt(editGold);
     if (isNaN(newGold) || newGold < 0) {
@@ -75,6 +94,42 @@ const AdminPage = () => {
     } catch (err) {
       console.error('골드 업데이트 실패:', err);
       alert('업데이트 실패');
+    }
+  };
+
+  // 설정 저장
+  const saveSettings = async () => {
+    setSavingSettings(true);
+    try {
+      const settingsRef = doc(db, 'settings', 'enhance');
+      await setDoc(settingsRef, settings);
+      alert('설정이 저장되었습니다!');
+    } catch (err) {
+      console.error('설정 저장 실패:', err);
+      alert('저장 실패: ' + err.message);
+    }
+    setSavingSettings(false);
+  };
+
+  // 설정값 업데이트
+  const updateSetting = (type, level, value) => {
+    const numValue = parseFloat(value);
+    if (isNaN(numValue)) return;
+    setSettings(prev => ({
+      ...prev,
+      [type]: { ...prev[type], [level]: numValue }
+    }));
+  };
+
+  // 기본값으로 리셋
+  const resetToDefault = () => {
+    if (confirm('기본값으로 초기화하시겠습니까?')) {
+      setSettings({
+        successRates: { ...SUCCESS_RATES },
+        downgradeRates: { ...DOWNGRADE_RATES },
+        destroyRates: { ...DESTROY_RATES },
+        enhanceCosts: { ...ENHANCE_COST },
+      });
     }
   };
 
@@ -109,10 +164,16 @@ const AdminPage = () => {
       {/* 탭 메뉴 */}
       <div style={styles.tabs}>
         <button
+          onClick={() => setActiveTab('settings')}
+          style={{ ...styles.tab, backgroundColor: activeTab === 'settings' ? '#FFD700' : '#333', color: activeTab === 'settings' ? '#000' : '#fff' }}
+        >
+          🎯 강화 설정
+        </button>
+        <button
           onClick={() => setActiveTab('images')}
           style={{ ...styles.tab, backgroundColor: activeTab === 'images' ? '#FFD700' : '#333', color: activeTab === 'images' ? '#000' : '#fff' }}
         >
-          📷 이미지 관리
+          📷 이미지 확인
         </button>
         <button
           onClick={() => setActiveTab('users')}
@@ -122,26 +183,131 @@ const AdminPage = () => {
         </button>
       </div>
 
-      {/* 이미지 관리 탭 */}
+      {/* 강화 설정 탭 */}
+      {activeTab === 'settings' && (
+        <>
+          <div style={styles.statsBar}>
+            <span>🎯 강화 확률 및 비용 설정</span>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <motion.button
+                onClick={resetToDefault}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                style={styles.resetBtn}
+              >
+                🔄 기본값
+              </motion.button>
+              <motion.button
+                onClick={saveSettings}
+                disabled={savingSettings}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                style={styles.saveAllBtn}
+              >
+                {savingSettings ? '저장 중...' : '💾 저장'}
+              </motion.button>
+            </div>
+          </div>
+
+          <div style={styles.settingsTable}>
+            <div style={styles.tableHeader}>
+              <div style={styles.colLevel}>레벨</div>
+              <div style={styles.colRate}>성공률 (%)</div>
+              <div style={styles.colRate}>하락률 (%)</div>
+              <div style={styles.colRate}>파괴율 (%)</div>
+              <div style={styles.colCost}>강화비용 (G)</div>
+            </div>
+            {levels.map((level) => {
+              const color = getLevelColor(level);
+              const isEditing = editingLevel === level;
+              return (
+                <div
+                  key={level}
+                  style={{
+                    ...styles.tableRow,
+                    backgroundColor: isEditing ? 'rgba(255,215,0,0.1)' : 'transparent',
+                  }}
+                  onClick={() => setEditingLevel(isEditing ? null : level)}
+                >
+                  <div style={styles.colLevel}>
+                    <span style={{ ...styles.levelBadge, backgroundColor: color, color: level >= 15 ? '#fff' : '#000' }}>
+                      +{level}
+                    </span>
+                  </div>
+                  <div style={styles.colRate}>
+                    {isEditing ? (
+                      <input
+                        type="number"
+                        value={settings.successRates[level]}
+                        onChange={(e) => updateSetting('successRates', level, e.target.value)}
+                        onClick={(e) => e.stopPropagation()}
+                        style={styles.input}
+                        step="0.1"
+                      />
+                    ) : (
+                      <span style={{ color: '#4CAF50' }}>{settings.successRates[level]}%</span>
+                    )}
+                  </div>
+                  <div style={styles.colRate}>
+                    {isEditing ? (
+                      <input
+                        type="number"
+                        value={settings.downgradeRates[level]}
+                        onChange={(e) => updateSetting('downgradeRates', level, e.target.value)}
+                        onClick={(e) => e.stopPropagation()}
+                        style={styles.input}
+                        step="0.1"
+                      />
+                    ) : (
+                      <span style={{ color: '#FF9800' }}>{settings.downgradeRates[level]}%</span>
+                    )}
+                  </div>
+                  <div style={styles.colRate}>
+                    {isEditing ? (
+                      <input
+                        type="number"
+                        value={settings.destroyRates[level]}
+                        onChange={(e) => updateSetting('destroyRates', level, e.target.value)}
+                        onClick={(e) => e.stopPropagation()}
+                        style={styles.input}
+                        step="0.1"
+                      />
+                    ) : (
+                      <span style={{ color: '#F44336' }}>{settings.destroyRates[level]}%</span>
+                    )}
+                  </div>
+                  <div style={styles.colCost}>
+                    {isEditing ? (
+                      <input
+                        type="number"
+                        value={settings.enhanceCosts[level]}
+                        onChange={(e) => updateSetting('enhanceCosts', level, e.target.value)}
+                        onClick={(e) => e.stopPropagation()}
+                        style={{ ...styles.input, width: 100 }}
+                      />
+                    ) : (
+                      <span style={{ color: '#FFD700' }}>{formatGold(settings.enhanceCosts[level])}</span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <div style={styles.hint}>* 행을 클릭하면 수정 모드로 전환됩니다</div>
+        </>
+      )}
+
+      {/* 이미지 확인 탭 */}
       {activeTab === 'images' && (
         <>
           <div style={styles.statsBar}>
-            <span>📷 등록된 이미지: {Object.keys(levelImages).length} / 21</span>
-            <motion.button
-              onClick={clearAllImages}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              style={styles.clearBtn}
-            >
-              🗑️ 전체 삭제
-            </motion.button>
+            <span>📷 레벨별 아이템 이미지 (읽기 전용)</span>
           </div>
 
           <div style={styles.grid}>
             {levels.map((level) => {
               const color = getLevelColor(level);
               const tier = getLevelTier(level);
-              const hasImage = !!levelImages[level];
 
               return (
                 <motion.div
@@ -151,8 +317,8 @@ const AdminPage = () => {
                   transition={{ delay: level * 0.03 }}
                   style={{
                     ...styles.card,
-                    borderColor: hasImage ? color : '#333',
-                    boxShadow: hasImage ? '0 0 15px ' + color + '44' : 'none',
+                    borderColor: color,
+                    boxShadow: '0 0 15px ' + color + '44',
                   }}
                 >
                   <div style={styles.cardHeader}>
@@ -163,31 +329,16 @@ const AdminPage = () => {
                   </div>
 
                   <div style={styles.imageArea}>
-                    {hasImage ? (
-                      <img src={levelImages[level]} alt={'level ' + level} style={styles.previewImage} />
-                    ) : (
-                      <div style={styles.placeholder}>
-                        <span style={{ fontSize: 30 }}>📷</span>
-                        <span style={{ fontSize: 12, color: '#666' }}>이미지 없음</span>
-                      </div>
-                    )}
+                    <img
+                      src={getItemImage(level)}
+                      alt={'level ' + level}
+                      style={styles.previewImage}
+                      onError={(e) => { e.target.style.display = 'none'; }}
+                    />
                   </div>
 
-                  <div style={styles.cardActions}>
-                    <label style={styles.uploadLabel}>
-                      {hasImage ? '변경' : '업로드'}
-                      <input
-                        type='file'
-                        accept='image/*'
-                        onChange={(e) => handleImageUpload(level, e)}
-                        style={{ display: 'none' }}
-                      />
-                    </label>
-                    {hasImage && (
-                      <button onClick={() => removeImageForLevel(level)} style={styles.removeBtn}>
-                        삭제
-                      </button>
-                    )}
+                  <div style={styles.imagePath}>
+                    {level}.png
                   </div>
                 </motion.div>
               );
@@ -301,6 +452,7 @@ const styles = {
     display: 'flex',
     gap: 10,
     marginBottom: 20,
+    flexWrap: 'wrap',
   },
   tab: {
     padding: '12px 24px',
@@ -320,10 +472,22 @@ const styles = {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 10,
   },
-  clearBtn: {
+  resetBtn: {
     padding: '8px 16px',
-    backgroundColor: '#F44336',
+    backgroundColor: '#666',
+    color: '#fff',
+    border: 'none',
+    borderRadius: 8,
+    cursor: 'pointer',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  saveAllBtn: {
+    padding: '8px 16px',
+    backgroundColor: '#4CAF50',
     color: '#fff',
     border: 'none',
     borderRadius: 8,
@@ -341,9 +505,58 @@ const styles = {
     fontSize: 12,
     fontWeight: 'bold',
   },
+  settingsTable: {
+    backgroundColor: 'rgba(20,20,40,0.9)',
+    borderRadius: 12,
+    overflow: 'hidden',
+    border: '1px solid #333',
+  },
+  tableHeader: {
+    display: 'flex',
+    padding: '12px 16px',
+    backgroundColor: 'rgba(255,215,0,0.1)',
+    borderBottom: '1px solid #444',
+    fontWeight: 'bold',
+    color: '#FFD700',
+    fontSize: 13,
+  },
+  tableRow: {
+    display: 'flex',
+    padding: '10px 16px',
+    borderBottom: '1px solid #333',
+    alignItems: 'center',
+    cursor: 'pointer',
+    transition: 'background 0.2s',
+  },
+  colLevel: { width: 80, flexShrink: 0 },
+  colRate: { flex: 1, textAlign: 'center', fontSize: 14 },
+  colCost: { width: 120, textAlign: 'right', fontSize: 14 },
+  levelBadge: {
+    padding: '4px 10px',
+    borderRadius: 6,
+    fontSize: 13,
+    fontWeight: 'bold',
+    display: 'inline-block',
+  },
+  input: {
+    width: 60,
+    padding: '4px 8px',
+    borderRadius: 4,
+    border: '1px solid #FFD700',
+    backgroundColor: '#1a1a2e',
+    color: '#fff',
+    fontSize: 13,
+    textAlign: 'center',
+  },
+  hint: {
+    color: '#666',
+    fontSize: 12,
+    marginTop: 10,
+    textAlign: 'center',
+  },
   grid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
     gap: 15,
   },
   card: {
@@ -354,7 +567,7 @@ const styles = {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    gap: 10,
+    gap: 8,
   },
   cardHeader: {
     display: 'flex',
@@ -362,19 +575,13 @@ const styles = {
     alignItems: 'center',
     width: '100%',
   },
-  levelBadge: {
-    padding: '4px 10px',
-    borderRadius: 6,
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
   tierLabel: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: 'bold',
   },
   imageArea: {
-    width: 100,
-    height: 100,
+    width: 90,
+    height: 90,
     borderRadius: 10,
     overflow: 'hidden',
     backgroundColor: 'rgba(0,0,0,0.4)',
@@ -387,37 +594,9 @@ const styles = {
     height: '100%',
     objectFit: 'cover',
   },
-  placeholder: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    gap: 5,
-  },
-  cardActions: {
-    display: 'flex',
-    gap: 8,
-    width: '100%',
-  },
-  uploadLabel: {
-    flex: 1,
-    padding: '8px 0',
-    backgroundColor: '#2196F3',
-    color: '#fff',
-    borderRadius: 6,
-    cursor: 'pointer',
-    fontSize: 12,
-    fontWeight: 'bold',
-    textAlign: 'center',
-  },
-  removeBtn: {
-    padding: '8px 12px',
-    backgroundColor: '#F44336',
-    color: '#fff',
-    border: 'none',
-    borderRadius: 6,
-    cursor: 'pointer',
-    fontSize: 12,
-    fontWeight: 'bold',
+  imagePath: {
+    color: '#666',
+    fontSize: 11,
   },
   usersSection: {},
   userList: {
