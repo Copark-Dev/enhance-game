@@ -1,0 +1,23 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 사용자 데이터
+    match /users/{userId} {
+      allow read: if true;
+      allow create: if true;
+      allow update: if true;
+    }
+    
+    // 레벨 이미지
+    match /levelImages/{imageId} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    // 랭킹
+    match /rankings/{rankId} {
+      allow read: if true;
+      allow write: if true;
+    }
+  }
+}
