@@ -153,7 +153,7 @@ export const AuthProvider = ({ children }) => {
     
     window.Kakao.Auth.authorize({
       redirectUri: redirectUri,
-      scope: 'profile_nickname,profile_image',
+      scope: 'profile_nickname,profile_image,account_email',
     });
   };
 
