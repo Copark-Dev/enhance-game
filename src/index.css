@@ -178,32 +178,32 @@ button:active { transform: translateY(0); }
     font-size: 16px !important;
   }
 
-  /* 아이템 크기 조정 - 모바일 */
+  /* 아이템 크기 조정 - 모바일 (크게) */
   .item-container {
-    width: 240px;
-    height: 240px;
+    width: 280px;
+    height: 280px;
   }
 
   .item-box {
-    width: 210px;
-    height: 210px;
-    padding: 6px;
-    border-radius: 18px !important;
+    width: 250px;
+    height: 250px;
+    padding: 8px;
+    border-radius: 22px !important;
   }
 
   .item-image {
-    width: 175px;
-    height: 175px;
-    border-radius: 10px !important;
+    width: 210px;
+    height: 210px;
+    border-radius: 12px !important;
   }
 
   .item-emoji {
-    font-size: 75px;
+    font-size: 90px;
   }
 
   .item-level {
-    font-size: 22px;
-    margin-top: 3px;
+    font-size: 26px;
+    margin-top: 4px;
   }
 
   .price-info {
@@ -230,27 +230,27 @@ button:active { transform: translateY(0); }
 /* 아주 작은 화면 */
 @media (max-width: 360px) {
   .item-container {
-    width: 200px;
-    height: 200px;
+    width: 240px;
+    height: 240px;
   }
 
   .item-box {
-    width: 175px;
-    height: 175px;
-    padding: 5px;
+    width: 210px;
+    height: 210px;
+    padding: 6px;
   }
 
   .item-image {
-    width: 145px;
-    height: 145px;
+    width: 175px;
+    height: 175px;
   }
 
   .item-emoji {
-    font-size: 60px;
+    font-size: 75px;
   }
 
   .item-level {
-    font-size: 18px;
+    font-size: 22px;
   }
 }
 

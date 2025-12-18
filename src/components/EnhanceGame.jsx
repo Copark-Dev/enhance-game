@@ -79,17 +79,28 @@ const EnhanceGame = () => {
       alert('카카오 SDK 로드 실패');
       return;
     }
-    const tierName = tierGuide.find(t => {
+    const maxTierName = tierGuide.find(t => {
+      const [start, end] = t.range.replace('+', '').split('~').map(Number);
+      return stats.maxLevel >= start && stats.maxLevel <= end;
+    })?.label || '일반';
+
+    const currentTierName = tierGuide.find(t => {
       const [start, end] = t.range.replace('+', '').split('~').map(Number);
       return level >= start && level <= end;
     })?.label || '일반';
 
+    const successRate = stats.attempts > 0 ? ((stats.successes / stats.attempts) * 100).toFixed(1) : 0;
+    const netProfit = stats.totalEarned - stats.totalSpent;
+
+    // 최고 레벨 아이템 이미지 사용
+    const imageUrl = `https://copark-dev.github.io/enhance-game/images/items/${stats.maxLevel}.png`;
+
     window.Kakao.Share.sendDefault({
       objectType: 'feed',
       content: {
-        title: '⚔️ 강화 시뮬레이터',
-        description: `${user?.nickname || '사용자'}님의 기록\n🏆 최고 +${stats.maxLevel} (${tierName})\n🎯 성공률 ${stats.attempts > 0 ? ((stats.successes / stats.attempts) * 100).toFixed(1) : 0}%`,
-        imageUrl: 'https://copark-dev.github.io/enhance-game/og-image.png',
+        title: `⚔️ ${user?.nickname || '사용자'}의 강화 기록`,
+        description: `🏆 최고 달성: +${stats.maxLevel} ${maxTierName}\n⚔️ 현재 장비: +${level} ${currentTierName}\n🎯 성공률: ${successRate}% (${stats.successes}/${stats.attempts})\n💰 순이익: ${formatGold(netProfit)}G`,
+        imageUrl: imageUrl,
         link: {
           mobileWebUrl: 'https://copark-dev.github.io/enhance-game/',
           webUrl: 'https://copark-dev.github.io/enhance-game/',
@@ -271,7 +282,7 @@ const EnhanceGame = () => {
 
       <StatsPanel stats={stats} gold={gold} isMobileOpen={showMobileStats} onClose={() => setShowMobileStats(false)} />
       <ResultOverlay result={result} level={level} lastSellPrice={lastSellPrice} isNewRecord={isNewRecord} />
-      <FriendPanel isOpen={showFriendPanel} onClose={() => setShowFriendPanel(false)} />
+      <FriendPanel isOpen={showFriendPanel} onClose={() => setShowFriendPanel(false)} onGoldChange={setGold} />
     </div>
   );
 };

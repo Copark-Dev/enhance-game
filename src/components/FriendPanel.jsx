@@ -3,19 +3,23 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { formatGold, getLevelColor, getLevelTier } from '../utils/constants';
 
-const FriendPanel = ({ isOpen, onClose }) => {
+const FriendPanel = ({ isOpen, onClose, onGoldChange }) => {
   const { user, searchUserByNickname, addFriend, removeFriend, getFriendsList, sendGold } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [friends, setFriends] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState('');
+  const [message, setMessage] = useState({ text: '', type: 'success' });
   const [giftAmount, setGiftAmount] = useState('');
   const [giftingTo, setGiftingTo] = useState(null);
 
   useEffect(() => {
     if (isOpen) {
       loadFriends();
+      // 패널 열릴 때 검색 상태 초기화
+      setSearchQuery('');
+      setSearchResults([]);
+      setMessage({ text: '', type: 'success' });
     }
   }, [isOpen]);
 
@@ -37,12 +41,14 @@ const FriendPanel = ({ isOpen, onClose }) => {
   const handleAddFriend = async (friendId) => {
     const success = await addFriend(friendId);
     if (success) {
-      setMessage('친구 추가 완료!');
+      setMessage({ text: '친구 추가 완료!', type: 'success' });
       setSearchResults([]);
       setSearchQuery('');
       loadFriends();
+    } else {
+      setMessage({ text: '이미 친구입니다', type: 'error' });
     }
-    setTimeout(() => setMessage(''), 2000);
+    setTimeout(() => setMessage({ text: '', type: 'success' }), 2000);
   };
 
   const handleRemoveFriend = async (friendId) => {
@@ -54,19 +60,28 @@ const FriendPanel = ({ isOpen, onClose }) => {
 
   const handleSendGold = async (friendId) => {
     const amount = parseInt(giftAmount);
-    if (isNaN(amount) || amount <= 0) {
-      setMessage('올바른 금액을 입력하세요');
-      setTimeout(() => setMessage(''), 2000);
+    if (isNaN(amount) || amount < 100) {
+      setMessage({ text: '최소 100G 이상 입력하세요', type: 'error' });
+      setTimeout(() => setMessage({ text: '', type: 'success' }), 2000);
+      return;
+    }
+    if (amount > user.gold) {
+      setMessage({ text: '골드가 부족합니다', type: 'error' });
+      setTimeout(() => setMessage({ text: '', type: 'success' }), 2000);
       return;
     }
     const result = await sendGold(friendId, amount);
-    setMessage(result.message);
+    setMessage({ text: result.message, type: result.success ? 'success' : 'error' });
     setGiftingTo(null);
     setGiftAmount('');
     if (result.success) {
       loadFriends();
+      // EnhanceGame의 골드 상태 동기화
+      if (onGoldChange) {
+        onGoldChange(user.gold - amount);
+      }
     }
-    setTimeout(() => setMessage(''), 2000);
+    setTimeout(() => setMessage({ text: '', type: 'success' }), 2000);
   };
 
   if (!isOpen) return null;
@@ -92,7 +107,15 @@ const FriendPanel = ({ isOpen, onClose }) => {
             <button onClick={onClose} style={styles.closeBtn}>✕</button>
           </div>
 
-          {message && <div style={styles.message}>{message}</div>}
+          {message.text && (
+            <div style={{
+              ...styles.message,
+              backgroundColor: message.type === 'error' ? 'rgba(244,67,54,0.2)' : 'rgba(76,175,80,0.2)',
+              color: message.type === 'error' ? '#F44336' : '#4CAF50'
+            }}>
+              {message.text}
+            </div>
+          )}
 
           {/* 검색 영역 */}
           <div style={styles.searchArea}>
@@ -100,7 +123,7 @@ const FriendPanel = ({ isOpen, onClose }) => {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
               placeholder="닉네임으로 검색..."
               style={styles.searchInput}
             />
@@ -110,20 +133,33 @@ const FriendPanel = ({ isOpen, onClose }) => {
           {/* 검색 결과 */}
           {searchResults.length > 0 && (
             <div style={styles.searchResults}>
-              {searchResults.map((result) => (
-                <div key={result.id} style={styles.userCard}>
-                  <div style={styles.userInfo}>
-                    {result.profileImage && <img src={result.profileImage} alt="" style={styles.avatar} />}
-                    <div>
-                      <div style={styles.nickname}>{result.nickname}</div>
-                      <div style={{ color: getLevelColor(result.level || 0), fontSize: 12 }}>
-                        +{result.level || 0} {getLevelTier(result.level || 0)}
+              {searchResults.map((result) => {
+                const isAlreadyFriend = user?.friends?.includes(result.id);
+                return (
+                  <div key={result.id} style={styles.userCard}>
+                    <div style={styles.userInfo}>
+                      <div style={styles.avatarWrapper}>
+                        {result.profileImage ? (
+                          <img src={result.profileImage} alt="" style={styles.avatar} />
+                        ) : (
+                          <div style={styles.defaultAvatar}>👤</div>
+                        )}
+                      </div>
+                      <div>
+                        <div style={styles.nickname}>{result.nickname}</div>
+                        <div style={{ color: getLevelColor(result.level || 0), fontSize: 12 }}>
+                          +{result.level || 0} {getLevelTier(result.level || 0)}
+                        </div>
                       </div>
                     </div>
+                    {isAlreadyFriend ? (
+                      <span style={styles.alreadyFriend}>친구</span>
+                    ) : (
+                      <button onClick={() => handleAddFriend(result.id)} style={styles.addBtn}>+ 추가</button>
+                    )}
                   </div>
-                  <button onClick={() => handleAddFriend(result.id)} style={styles.addBtn}>+ 추가</button>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
 
@@ -138,7 +174,13 @@ const FriendPanel = ({ isOpen, onClose }) => {
               friends.map((friend) => (
                 <div key={friend.id} style={styles.friendCard}>
                   <div style={styles.userInfo}>
-                    {friend.profileImage && <img src={friend.profileImage} alt="" style={styles.avatar} />}
+                    <div style={styles.avatarWrapper}>
+                      {friend.profileImage ? (
+                        <img src={friend.profileImage} alt="" style={styles.avatar} />
+                      ) : (
+                        <div style={styles.defaultAvatar}>👤</div>
+                      )}
+                    </div>
                     <div>
                       <div style={styles.nickname}>{friend.nickname}</div>
                       <div style={{ color: getLevelColor(friend.level || 0), fontSize: 12 }}>
@@ -263,11 +305,34 @@ const styles = {
     alignItems: 'center',
     gap: 10,
   },
+  avatarWrapper: {
+    width: 40,
+    height: 40,
+    flexShrink: 0,
+  },
   avatar: {
     width: 40,
     height: 40,
     borderRadius: '50%',
     border: '2px solid #FFD700',
+  },
+  defaultAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: '50%',
+    backgroundColor: '#333',
+    border: '2px solid #FFD700',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: 20,
+  },
+  alreadyFriend: {
+    padding: '6px 12px',
+    borderRadius: 6,
+    backgroundColor: '#666',
+    color: '#aaa',
+    fontSize: 12,
   },
   nickname: {
     color: '#fff',
