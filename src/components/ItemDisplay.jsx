@@ -1,15 +1,20 @@
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { getLevelColor, getLevelTier, MAX_LEVEL, getEffectIntensity } from '../utils/constants';
-import { useImages } from '../context/ImageContext';
+import { getLevelColor, getLevelTier, MAX_LEVEL, getEffectIntensity, getItemImage } from '../utils/constants';
 
 const ItemDisplay = ({ level, isEnhancing, result, isDestroyed }) => {
   const color = getLevelColor(level);
   const tier = getLevelTier(level);
   const intensity = getEffectIntensity(level);
-  const { levelImages } = useImages();
+  const [imageError, setImageError] = useState(false);
 
-  // 레벨별 이미지 사용
-  const displayImage = levelImages[level];
+  // 레벨별 정적 이미지 사용
+  const itemImage = getItemImage(level);
+
+  // 레벨 변경 시 이미지 에러 상태 리셋
+  useEffect(() => {
+    setImageError(false);
+  }, [level]);
 
   return (
     <div className="item-container" style={{
@@ -395,8 +400,13 @@ const ItemDisplay = ({ level, isEnhancing, result, isDestroyed }) => {
             zIndex: 15, overflow: 'hidden', border: '2px solid ' + (isDestroyed ? '#222' : color) + '44',
           }}
         >
-          {displayImage ? (
-            <img src={displayImage} alt='item' style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          {!imageError && !isDestroyed ? (
+            <img
+              src={itemImage}
+              alt='item'
+              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              onError={() => setImageError(true)}
+            />
           ) : (
             <span className="item-emoji">{isDestroyed ? '💔' : '⚔️'}</span>
           )}
