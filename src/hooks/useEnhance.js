@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { SUCCESS_RATES, DOWNGRADE_RATES, DESTROY_RATES, ENHANCE_COST, getSellPrice, MAX_LEVEL } from '../utils/constants';
+import { playEnhanceStart, playSuccess, playFail, playDestroyed, playSell } from '../utils/sounds';
 
 export const useEnhance = (initialLevel = 0, initialGold = 50000) => {
   const [level, setLevel] = useState(initialLevel);
@@ -33,6 +34,9 @@ export const useEnhance = (initialLevel = 0, initialGold = 50000) => {
     setGold((g) => g - enhanceCost);
     setStats((s) => ({ ...s, totalSpent: s.totalSpent + enhanceCost }));
 
+    // 강화 시작 사운드
+    playEnhanceStart();
+
     const enhanceTime = getEnhanceTime(level);
     await new Promise((r) => setTimeout(r, enhanceTime));
 
@@ -48,12 +52,14 @@ export const useEnhance = (initialLevel = 0, initialGold = 50000) => {
         return { ...s, attempts: s.attempts + 1, successes: s.successes + 1, maxLevel: Math.max(s.maxLevel, newLevel) };
       });
       setResult('success');
+      playSuccess(newLevel);
     } else {
       const destroyRoll = Math.random() * 100;
       if (destroyRoll < destroyRate) {
         setIsDestroyed(true);
         setStats((s) => ({ ...s, attempts: s.attempts + 1, failures: s.failures + 1 }));
         setResult('destroyed');
+        playDestroyed();
       } else {
         const downgradeRoll = Math.random() * 100;
         if (downgradeRoll < downgradeRate) {
@@ -61,19 +67,21 @@ export const useEnhance = (initialLevel = 0, initialGold = 50000) => {
         }
         setStats((s) => ({ ...s, attempts: s.attempts + 1, failures: s.failures + 1 }));
         setResult('fail');
+        playFail();
       }
     }
     setTimeout(() => setIsEnhancing(false), 500);
   }, [canEnhance, level, successRate, downgradeRate, destroyRate, enhanceCost]);
 
   const sell = useCallback(() => {
-    if (isEnhancing || isDestroyed) return;
+    if (isEnhancing || isDestroyed || level === 0) return;
     const price = getSellPrice(level);
     setGold((g) => g + price);
     setLastSellPrice(price);
     setStats((s) => ({ ...s, totalEarned: s.totalEarned + price }));
     setLevel(0);
     setResult('sold');
+    playSell();
     setTimeout(() => setResult(null), 1500);
   }, [level, isEnhancing, isDestroyed]);
 
