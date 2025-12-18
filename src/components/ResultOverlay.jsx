@@ -1,10 +1,10 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { getLevelColor, getLevelTier, formatGold } from '../utils/constants';
 
-const ResultOverlay = ({ result, level, lastSellPrice }) => {
+const ResultOverlay = ({ result, level, lastSellPrice, isNewRecord }) => {
   const color = getLevelColor(level);
   const tier = getLevelTier(level);
-  
+
   const getContent = () => {
     if (result === 'success') {
       return {
@@ -13,16 +13,17 @@ const ResultOverlay = ({ result, level, lastSellPrice }) => {
         subText: '+' + level + ' ' + tier,
         color,
         showRainbow: level >= 15,
+        isUnlock: isNewRecord,
       };
     }
     if (result === 'fail') {
-      return { emoji: '💥', text: '강화 실패...', subText: '+' + level, color: '#FF4444', showRainbow: false };
+      return { emoji: '💥', text: '강화 실패...', subText: '+' + level, color: '#FF4444', showRainbow: false, isUnlock: false };
     }
     if (result === 'destroyed') {
-      return { emoji: '💀', text: '파괴!!', subText: '', color: '#FF0000', showRainbow: false };
+      return { emoji: '💀', text: '파괴!!', subText: '', color: '#FF0000', showRainbow: false, isUnlock: false };
     }
     if (result === 'sold') {
-      return { emoji: '💰', text: '판매 완료!', subText: '+' + formatGold(lastSellPrice) + ' G', color: '#FFD700', showRainbow: false };
+      return { emoji: '💰', text: '판매 완료!', subText: '+' + formatGold(lastSellPrice) + ' G', color: '#FFD700', showRainbow: false, isUnlock: false };
     }
     return null;
   };
@@ -52,6 +53,27 @@ const ResultOverlay = ({ result, level, lastSellPrice }) => {
             <motion.div initial={{ y: 30, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.5 }}
               style={{ fontSize: 28, color: content.color, marginTop: 15, fontWeight: 'bold', textShadow: '0 0 20px ' + content.color, zIndex: 1 }}>
               {content.subText}</motion.div>
+          )}
+          {content.isUnlock && (
+            <motion.div
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: [0, 1.3, 1], opacity: 1 }}
+              transition={{ delay: 0.7, duration: 0.5 }}
+              style={{
+                marginTop: 25,
+                padding: '12px 30px',
+                background: 'linear-gradient(135deg, #FFD700, #FFA500)',
+                borderRadius: 30,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                boxShadow: '0 0 30px rgba(255, 215, 0, 0.6)',
+                zIndex: 1,
+              }}
+            >
+              <span style={{ fontSize: 24 }}>🔓</span>
+              <span style={{ fontSize: 20, fontWeight: 'bold', color: '#000' }}>NEW! +{level} 최초 달성!</span>
+            </motion.div>
           )}
         </motion.div>
       )}

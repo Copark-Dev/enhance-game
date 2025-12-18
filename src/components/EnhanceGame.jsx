@@ -15,7 +15,7 @@ const EnhanceGame = () => {
   const navigate = useNavigate();
   const { user, logout, updateUserData } = useAuth();
   const {
-    level, gold, isEnhancing, result, isDestroyed, stats, lastSellPrice,
+    level, gold, isEnhancing, result, isDestroyed, stats, lastSellPrice, isNewRecord,
     successRate, downgradeRate, destroyRate, enhanceCost,
     canEnhance, enhance, sell, reset, addGold, setResult, setGold, setStats
   } = useEnhance(0, user?.gold || 50000);
@@ -169,7 +169,7 @@ const EnhanceGame = () => {
       </div>
 
       <StatsPanel stats={stats} gold={gold} />
-      <ResultOverlay result={result} level={level} lastSellPrice={lastSellPrice} />
+      <ResultOverlay result={result} level={level} lastSellPrice={lastSellPrice} isNewRecord={isNewRecord} />
     </div>
   );
 };

@@ -8,6 +8,7 @@ export const useEnhance = (initialLevel = 0, initialGold = 50000) => {
   const [result, setResult] = useState(null);
   const [isDestroyed, setIsDestroyed] = useState(false);
   const [lastSellPrice, setLastSellPrice] = useState(null);
+  const [isNewRecord, setIsNewRecord] = useState(false);
   const [stats, setStats] = useState({ attempts: 0, successes: 0, failures: 0, maxLevel: 0, totalSpent: 0, totalEarned: 0 });
 
   const successRate = SUCCESS_RATES[level] || 1;
@@ -28,9 +29,10 @@ export const useEnhance = (initialLevel = 0, initialGold = 50000) => {
     if (!canEnhance) return null;
     setIsEnhancing(true);
     setResult(null);
+    setIsNewRecord(false);
     setGold((g) => g - enhanceCost);
     setStats((s) => ({ ...s, totalSpent: s.totalSpent + enhanceCost }));
-    
+
     const enhanceTime = getEnhanceTime(level);
     await new Promise((r) => setTimeout(r, enhanceTime));
 
@@ -40,7 +42,11 @@ export const useEnhance = (initialLevel = 0, initialGold = 50000) => {
     if (isSuccess) {
       const newLevel = level + 1;
       setLevel(newLevel);
-      setStats((s) => ({ ...s, attempts: s.attempts + 1, successes: s.successes + 1, maxLevel: Math.max(s.maxLevel, newLevel) }));
+      setStats((s) => {
+        const isRecord = newLevel > s.maxLevel;
+        if (isRecord) setIsNewRecord(true);
+        return { ...s, attempts: s.attempts + 1, successes: s.successes + 1, maxLevel: Math.max(s.maxLevel, newLevel) };
+      });
       setResult('success');
     } else {
       const destroyRoll = Math.random() * 100;
@@ -81,7 +87,7 @@ export const useEnhance = (initialLevel = 0, initialGold = 50000) => {
   const addGold = useCallback((amount) => setGold((g) => g + amount), []);
 
   return {
-    level, gold, isEnhancing, result, isDestroyed, stats, lastSellPrice,
+    level, gold, isEnhancing, result, isDestroyed, stats, lastSellPrice, isNewRecord,
     successRate, downgradeRate, destroyRate, enhanceCost,
     canEnhance, enhance, sell, reset, addGold, setResult,
     setGold, setStats

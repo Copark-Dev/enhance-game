@@ -12,13 +12,11 @@ const ItemDisplay = ({ level, isEnhancing, result, isDestroyed }) => {
   const displayImage = levelImages[level];
 
   return (
-    <div style={{
+    <div className="item-container" style={{
       position: 'absolute',
-      top: '45%',
+      top: '42%',
       left: '50%',
       transform: 'translate(-50%, -50%)',
-      width: 400,
-      height: 400,
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center'
@@ -331,9 +329,10 @@ const ItemDisplay = ({ level, isEnhancing, result, isDestroyed }) => {
           scale: { duration: level >= 19 ? 0.5 : level >= 15 ? 0.4 : 0.3, repeat: isEnhancing ? Infinity : 0 },
           rotate: { duration: 0.5 },
         }}
+        className="item-box"
         style={{
           position: 'relative',
-          width: 280, height: 280, borderRadius: 28, pointerEvents: 'auto',
+          borderRadius: 28, pointerEvents: 'auto',
           background: isDestroyed ? 'linear-gradient(145deg, #1a1a1a, #0a0a0a)' : 'linear-gradient(145deg, #1a1a3a, #0a0a2a)',
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
           border: '3px solid ' + (isDestroyed ? '#333' : color),
@@ -389,8 +388,9 @@ const ItemDisplay = ({ level, isEnhancing, result, isDestroyed }) => {
               : isDestroyed ? 'grayscale(1) brightness(0.3)' : 'brightness(1)',
           }}
           transition={{ duration: level >= 15 ? 0.2 : 0.3, repeat: isEnhancing ? Infinity : 0 }}
+          className="item-image"
           style={{
-            width: 140, height: 140, borderRadius: 16, backgroundColor: 'rgba(0,0,0,0.4)',
+            borderRadius: 16, backgroundColor: 'rgba(0,0,0,0.4)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             zIndex: 15, overflow: 'hidden', border: '2px solid ' + (isDestroyed ? '#222' : color) + '44',
           }}
@@ -398,7 +398,7 @@ const ItemDisplay = ({ level, isEnhancing, result, isDestroyed }) => {
           {displayImage ? (
             <img src={displayImage} alt='item' style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           ) : (
-            <span style={{ fontSize: 70 }}>{isDestroyed ? '💔' : '⚔️'}</span>
+            <span className="item-emoji">{isDestroyed ? '💔' : '⚔️'}</span>
           )}
         </motion.div>
 
@@ -407,11 +407,12 @@ const ItemDisplay = ({ level, isEnhancing, result, isDestroyed }) => {
           initial={{ scale: 3, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ type: 'spring', damping: 8 }}
+          className="item-level"
           style={{
-            fontSize: 36, fontWeight: 'bold',
+            fontWeight: 'bold',
             color: isDestroyed ? '#444' : color,
             textShadow: isDestroyed ? 'none' : '0 0 15px ' + color + ', 0 0 30px ' + color,
-            marginTop: 10, zIndex: 15,
+            zIndex: 15,
           }}
         >
           {isDestroyed ? '파괴됨' : '+' + level}
