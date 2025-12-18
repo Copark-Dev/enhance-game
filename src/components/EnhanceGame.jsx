@@ -99,20 +99,20 @@ const EnhanceGame = () => {
   ];
 
   return (
-    <div style={styles.container}>
+    <div style={styles.container} className="game-container">
       <div style={styles.bgGlow} />
 
       {/* 상단 고정바 */}
-      <div style={styles.topBar}>
+      <div style={styles.topBar} className="top-bar">
         {(user?.email === 'psw4887@naver.com' || user?.nickname === '박세완') && (
           <motion.button onClick={() => navigate('/admin')} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} style={styles.adminBtn}>
             ⚙️ 어드민
           </motion.button>
         )}
 
-        <div style={styles.userInfo}>
-          {user?.profileImage && <img src={user.profileImage} alt='profile' style={styles.profileImg} />}
-          <span style={styles.userName}>{user?.nickname || '사용자'}</span>
+        <div style={styles.userInfo} className="user-info">
+          {user?.profileImage && <img src={user.profileImage} alt='profile' style={styles.profileImg} className="profile-img" />}
+          <span style={styles.userName} className="user-name">{user?.nickname || '사용자'}</span>
           <motion.button onClick={handleShare} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} style={styles.shareBtn}>
             📤 공유
           </motion.button>
@@ -122,55 +122,52 @@ const EnhanceGame = () => {
         </div>
       </div>
 
-      {/* 메인 게임 영역 - 화면 중앙 */}
-      <div style={styles.mainContent}>
-        {/* 상단 정보 */}
-        <div style={styles.topSection}>
-          <motion.h1 initial={{ y: -30, opacity: 0 }} animate={{ y: 0, opacity: 1 }} style={styles.title}>⚔️ 강화 시뮬레이터</motion.h1>
-          <div style={styles.goldArea}>
-            <span style={styles.goldIcon}>🪙</span>
-            <span style={styles.goldAmount}>{formatGold(gold)}</span>
-          </div>
-        </div>
+      {/* 아이템 영역 - 화면 정중앙 고정 */}
+      <div style={styles.centerItem} className="item-display-wrapper">
+        <ParticleEffect trigger={result} type={result || 'success'} level={level} />
+        <ItemDisplay level={level} isEnhancing={isEnhancing} result={result} isDestroyed={isDestroyed} />
+      </div>
 
-        {/* 아이템 영역 - 정중앙 */}
-        <div style={styles.itemArea}>
-          <ParticleEffect trigger={result} type={result || 'success'} level={level} />
-          <ItemDisplay level={level} isEnhancing={isEnhancing} result={result} isDestroyed={isDestroyed} />
-        </div>
-
-        {/* 하단 컨트롤 */}
-        <div style={styles.bottomSection}>
-          <div style={styles.priceInfo}>
-            <div style={styles.priceRow}><span style={styles.priceLabel}>강화 비용</span><span style={styles.priceCost}>{formatGold(enhanceCost)} G</span></div>
-            <div style={styles.priceRow}><span style={styles.priceLabel}>판매 예상가</span><span style={styles.priceSell}>{formatGold(sellRange.min)} ~ {formatGold(sellRange.max)} G</span></div>
-          </div>
-
-          <RateDisplay successRate={successRate} downgradeRate={downgradeRate} destroyRate={destroyRate} />
-
-          <div style={styles.buttonArea}>
-            {isDestroyed ? (
-              <motion.button onClick={reset} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} style={styles.resetBtn}>🔄 다시 시작</motion.button>
-            ) : (
-              <div style={styles.buttonRow}>
-                <EnhanceButton onClick={enhance} disabled={!canEnhance} isEnhancing={isEnhancing} isMax={level >= MAX_LEVEL} />
-                <motion.button onClick={sell} disabled={isEnhancing || level === 0}
-                  whileHover={!isEnhancing && level > 0 ? { scale: 1.05 } : {}}
-                  whileTap={!isEnhancing && level > 0 ? { scale: 0.95 } : {}}
-                  style={{ ...styles.sellBtn, opacity: isEnhancing || level === 0 ? 0.4 : 1, cursor: isEnhancing || level === 0 ? 'not-allowed' : 'pointer' }}>
-                  💰 판매
-                </motion.button>
-              </div>
-            )}
-          </div>
-
-          {gold < enhanceCost && !isDestroyed && level < MAX_LEVEL && <div style={styles.warning}>⚠️ 골드 부족! (필요: {formatGold(enhanceCost)}G)</div>}
+      {/* 상단 UI */}
+      <div style={styles.topUI}>
+        <motion.h1 initial={{ y: -30, opacity: 0 }} animate={{ y: 0, opacity: 1 }} style={styles.title} className="game-title">⚔️ 강화 시뮬레이터</motion.h1>
+        <div style={styles.goldArea} className="gold-area">
+          <span style={styles.goldIcon}>🪙</span>
+          <span style={styles.goldAmount} className="gold-amount">{formatGold(gold)}</span>
         </div>
       </div>
 
-      {/* 하단 티어 가이드 */}
-      <div style={styles.tierGuide}>
-        {tierGuide.map((t) => (<div key={t.range} style={{ color: t.color, textAlign: 'center' }}><div style={{ fontSize: 11 }}>{t.label}</div><div style={{ fontSize: 13, fontWeight: 'bold' }}>{t.range}</div></div>))}
+      {/* 하단 UI */}
+      <div style={styles.bottomUI}>
+        <div style={styles.priceInfo} className="price-info">
+          <div style={styles.priceRow}><span style={styles.priceLabel}>강화 비용</span><span style={styles.priceCost}>{formatGold(enhanceCost)} G</span></div>
+          <div style={styles.priceRow}><span style={styles.priceLabel}>판매 예상가</span><span style={styles.priceSell}>{formatGold(sellRange.min)} ~ {formatGold(sellRange.max)} G</span></div>
+        </div>
+
+        <RateDisplay successRate={successRate} downgradeRate={downgradeRate} destroyRate={destroyRate} />
+
+        <div style={styles.buttonArea}>
+          {isDestroyed ? (
+            <motion.button onClick={reset} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} style={styles.resetBtn}>🔄 다시 시작</motion.button>
+          ) : (
+            <div style={styles.buttonRow} className="button-row">
+              <EnhanceButton onClick={enhance} disabled={!canEnhance} isEnhancing={isEnhancing} isMax={level >= MAX_LEVEL} />
+              <motion.button onClick={sell} disabled={isEnhancing || level === 0}
+                whileHover={!isEnhancing && level > 0 ? { scale: 1.05 } : {}}
+                whileTap={!isEnhancing && level > 0 ? { scale: 0.95 } : {}}
+                className="sell-btn"
+                style={{ ...styles.sellBtn, opacity: isEnhancing || level === 0 ? 0.4 : 1, cursor: isEnhancing || level === 0 ? 'not-allowed' : 'pointer' }}>
+                💰 판매
+              </motion.button>
+            </div>
+          )}
+        </div>
+
+        {gold < enhanceCost && !isDestroyed && level < MAX_LEVEL && <div style={styles.warning}>⚠️ 골드 부족! (필요: {formatGold(enhanceCost)}G)</div>}
+
+        <div style={styles.tierGuide} className="tier-guide">
+          {tierGuide.map((t) => (<div key={t.range} style={{ color: t.color, textAlign: 'center' }}><div style={{ fontSize: 11 }}>{t.label}</div><div style={{ fontSize: 13, fontWeight: 'bold' }}>{t.range}</div></div>))}
+        </div>
       </div>
 
       <StatsPanel stats={stats} gold={gold} />
@@ -181,9 +178,9 @@ const EnhanceGame = () => {
 
 const styles = {
   container: { minHeight: '100vh', background: 'linear-gradient(180deg, #0a0a1a 0%, #151530 50%, #0a0a1a 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between', paddingTop: 70, paddingBottom: 20, paddingLeft: 20, paddingRight: 20, fontFamily: 'Noto Sans KR, sans-serif', position: 'relative', overflow: 'hidden' },
-  mainContent: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, width: '100%', gap: 10 },
-  topSection: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 },
-  bottomSection: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 },
+  centerItem: { position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 1 },
+  topUI: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, zIndex: 2 },
+  bottomUI: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, zIndex: 2 },
   bgGlow: { position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: 500, height: 500, background: 'radial-gradient(circle, rgba(80,80,150,0.2) 0%, transparent 70%)', pointerEvents: 'none' },
   topBar: { position: 'fixed', top: 0, left: 0, right: 0, display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 20px', backgroundColor: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(10px)', zIndex: 100 },
   adminBtn: { padding: '8px 14px', backgroundColor: '#333', color: '#fff', border: '1px solid #555', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 'bold' },
