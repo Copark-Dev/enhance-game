@@ -69,7 +69,7 @@ const BattlePanel = ({ isOpen, onClose, currentUser, userStats, inventory = [], 
     setBattleLog([]);
 
     const myLevel = selectedItem.level;
-    const opponentLevel = selectedOpponent.maxLevel || 0;
+    const opponentLevel = selectedOpponent.stats?.maxLevel || 0;
 
     let myHp = 100 + myLevel * 20;
     let opponentHp = 100 + opponentLevel * 20;
@@ -288,8 +288,8 @@ const BattlePanel = ({ isOpen, onClose, currentUser, userStats, inventory = [], 
                     <div style={styles.vs}>VS</div>
                     <div style={styles.fighter}>
                       <div style={styles.opponentIcon}>👤</div>
-                      <div style={{ color: getLevelColor(selectedOpponent?.maxLevel || 0) }}>
-                        +{selectedOpponent?.maxLevel || 0}
+                      <div style={{ color: getLevelColor(selectedOpponent?.stats?.maxLevel || 0) }}>
+                        +{selectedOpponent?.stats?.maxLevel || 0}
                       </div>
                     </div>
                   </div>
@@ -354,13 +354,13 @@ const BattlePanel = ({ isOpen, onClose, currentUser, userStats, inventory = [], 
                       <div style={styles.opponentList}>
                         {opponents.map((opp) => (
                           <motion.div
-                            key={opp.odtxkd}
+                            key={opp.id}
                             onClick={() => setSelectedOpponent(opp)}
                             whileHover={{ scale: 1.02 }}
                             style={{
                               ...styles.opponentCard,
-                              borderColor: selectedOpponent?.odtxkd === opp.odtxkd ? '#FFD700' : '#333',
-                              backgroundColor: selectedOpponent?.odtxkd === opp.odtxkd ? 'rgba(255,215,0,0.2)' : 'rgba(255,255,255,0.05)'
+                              borderColor: selectedOpponent?.id === opp.id ? '#FFD700' : '#333',
+                              backgroundColor: selectedOpponent?.id === opp.id ? 'rgba(255,215,0,0.2)' : 'rgba(255,255,255,0.05)'
                             }}
                           >
                             <img
@@ -371,8 +371,8 @@ const BattlePanel = ({ isOpen, onClose, currentUser, userStats, inventory = [], 
                             />
                             <div style={styles.oppInfo}>
                               <div style={{ color: '#fff', fontWeight: 'bold' }}>{opp.nickname}</div>
-                              <div style={{ color: getLevelColor(opp.maxLevel || 0), fontSize: 12 }}>
-                                최고 +{opp.maxLevel || 0} | 전투력: {calculatePower(opp.maxLevel || 0)}
+                              <div style={{ color: getLevelColor(opp.stats?.maxLevel || 0), fontSize: 12 }}>
+                                최고 +{opp.stats?.maxLevel || 0} | 전투력: {calculatePower(opp.stats?.maxLevel || 0)}
                               </div>
                             </div>
                           </motion.div>

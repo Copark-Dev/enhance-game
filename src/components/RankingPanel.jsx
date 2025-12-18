@@ -115,11 +115,11 @@ const RankingPanel = ({ isOpen, onClose, currentUser, getRankings }) => {
               ) : (
                 currentRankings.map((user, index) => {
                   const rank = index + 1;
-                  const isCurrentUser = currentUser && user.odtxkd === currentUser.odtxkd;
+                  const isCurrentUser = currentUser && user.id === currentUser.id;
 
                   return (
                     <motion.div
-                      key={user.odtxkd}
+                      key={user.id}
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: index * 0.05 }}

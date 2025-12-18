@@ -54,8 +54,9 @@ const DailyRewardPanel = ({ isOpen, onClose, user, onClaimReward }) => {
 
   // 연속 출석 보상 계산
   const getRewardAmount = (currentStreak) => {
-    const baseReward = 1000;
-    const streakBonus = Math.min(currentStreak, 7) * 500; // 최대 7일 보너스
+    if (currentStreak >= 7) return 100000; // 7일 연속 특별 보상
+    const baseReward = 10000;
+    const streakBonus = Math.min(currentStreak - 1, 6) * 3000; // 일당 +3000
     return baseReward + streakBonus;
   };
 
@@ -71,13 +72,13 @@ const DailyRewardPanel = ({ isOpen, onClose, user, onClaimReward }) => {
   if (!isOpen) return null;
 
   const rewards = [
-    { day: 1, gold: 1500 },
-    { day: 2, gold: 2000 },
-    { day: 3, gold: 2500 },
-    { day: 4, gold: 3000 },
-    { day: 5, gold: 3500 },
-    { day: 6, gold: 4000 },
-    { day: 7, gold: 5000, special: true },
+    { day: 1, gold: 10000 },
+    { day: 2, gold: 13000 },
+    { day: 3, gold: 16000 },
+    { day: 4, gold: 19000 },
+    { day: 5, gold: 22000 },
+    { day: 6, gold: 25000 },
+    { day: 7, gold: 100000, special: true },
   ];
 
   return (

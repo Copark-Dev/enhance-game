@@ -280,7 +280,7 @@ export const AuthProvider = ({ children }) => {
       querySnapshot.forEach((doc) => {
         const data = doc.data();
         users.push({
-          odtxkd: doc.id,
+          id: doc.id,
           nickname: data.nickname,
           avatar: data.profileImage,
           maxLevel: data.stats?.maxLevel || 0,
