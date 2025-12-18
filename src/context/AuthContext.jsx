@@ -66,21 +66,15 @@ export const AuthProvider = ({ children }) => {
 
   const fetchKakaoUser = async () => {
     try {
-      window.Kakao.API.request({
+      const res = await window.Kakao.API.request({
         url: '/v2/user/me',
-        success: async (res) => {
-          const kakaoUser = {
-            id: res.id.toString(),
-            nickname: res.properties?.nickname || '사용자',
-            profileImage: res.properties?.profile_image || null,
-          };
-          await saveUserToFirestore(kakaoUser);
-        },
-        fail: (err) => {
-          console.error('사용자 정보 가져오기 실패:', err);
-          setLoading(false);
-        },
       });
+      const kakaoUser = {
+        id: res.id.toString(),
+        nickname: res.properties?.nickname || '사용자',
+        profileImage: res.properties?.profile_image || null,
+      };
+      await saveUserToFirestore(kakaoUser);
     } catch (err) {
       console.error('카카오 API 오류:', err);
       setLoading(false);
