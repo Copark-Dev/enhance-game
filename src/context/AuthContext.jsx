@@ -547,13 +547,32 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // 강화 로그 저장 (실시간 피드용)
+  const saveEnhanceLog = async (level, result, previousLevel) => {
+    if (!user) return;
+    try {
+      const logRef = doc(collection(db, 'enhanceLogs'));
+      await setDoc(logRef, {
+        userId: user.id,
+        nickname: user.nickname,
+        profileImage: user.profileImage,
+        level: level,
+        previousLevel: previousLevel,
+        result: result, // 'success' | 'fail' | 'destroyed'
+        timestamp: new Date().toISOString()
+      });
+    } catch (err) {
+      console.error('강화 로그 저장 실패:', err);
+    }
+  };
+
   return (
     <AuthContext.Provider value={{
       user, loading, loginWithKakao, logout, updateUserData,
       searchUserByNickname, addFriend, removeFriend, getFriendsList, sendGold,
       getRankings, claimDailyReward, claimAchievement, updateBattleStats,
       getRandomOpponents, saveBattleNotification, getBattleNotifications, markBattleNotificationsRead,
-      saveFCMToken, notifyFriendsHighEnhance
+      saveFCMToken, notifyFriendsHighEnhance, saveEnhanceLog
     }}>
       {children}
     </AuthContext.Provider>

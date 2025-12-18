@@ -20,13 +20,14 @@ import BattlePanel from './BattlePanel';
 import BattleNotificationModal from './BattleNotificationModal';
 import BottomNavigation from './BottomNavigation';
 import InstallPromptModal, { shouldShowInstallPrompt } from './InstallPromptModal';
+import LiveFeed from './LiveFeed';
 
 const EnhanceGame = () => {
   const navigate = useNavigate();
   const {
     user, logout, updateUserData, getRankings, claimDailyReward, claimAchievement, updateBattleStats,
     getRandomOpponents, saveBattleNotification, getBattleNotifications, markBattleNotificationsRead,
-    saveFCMToken, notifyFriendsHighEnhance
+    saveFCMToken, notifyFriendsHighEnhance, saveEnhanceLog
   } = useAuth();
   const {
     level, gold, isEnhancing, result, isDestroyed, stats, lastSellPrice, isNewRecord,
@@ -47,6 +48,8 @@ const EnhanceGame = () => {
   const [battleNotifications, setBattleNotifications] = useState([]);
   const [showBattleNotifications, setShowBattleNotifications] = useState(false);
   const [showInstallPrompt, setShowInstallPrompt] = useState(false);
+  const [showLiveFeed, setShowLiveFeed] = useState(false);
+  const [previousLevel, setPreviousLevel] = useState(0);
   const sellRange = SELL_PRICE[level] || { min: 0, max: 0 };
 
   // 유저 데이터로 초기화
@@ -96,6 +99,20 @@ const EnhanceGame = () => {
       notifyFriendsHighEnhance(level);
     }
   }, [result, level]);
+
+  // 강화 결과 실시간 피드에 저장
+  useEffect(() => {
+    if (result && saveEnhanceLog && (result === 'success' || result === 'fail' || result === 'destroyed')) {
+      saveEnhanceLog(level, result, previousLevel);
+    }
+  }, [result]);
+
+  // 강화 시작 전 현재 레벨 저장
+  useEffect(() => {
+    if (isEnhancing) {
+      setPreviousLevel(level);
+    }
+  }, [isEnhancing]);
 
   // 홈 화면 추가 가이드 (모바일 웹 사용자만)
   useEffect(() => {
@@ -418,6 +435,12 @@ const EnhanceGame = () => {
       <InstallPromptModal
         isOpen={showInstallPrompt}
         onClose={() => setShowInstallPrompt(false)}
+      />
+
+      {/* 실시간 강화 피드 */}
+      <LiveFeed
+        isOpen={showLiveFeed}
+        onToggle={() => setShowLiveFeed(!showLiveFeed)}
       />
 
       {/* 하단 네비게이션 */}

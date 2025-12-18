@@ -177,3 +177,32 @@ exports.sendBattleNotification = functions.firestore
       console.error('배틀 푸시 전송 실패:', err);
     }
   });
+
+// 오래된 강화 로그 정리 (1시간마다 실행)
+exports.cleanupEnhanceLogs = functions.pubsub
+  .schedule('every 60 minutes')
+  .onRun(async (context) => {
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+
+    try {
+      const logsRef = admin.firestore().collection('enhanceLogs');
+      const oldLogs = await logsRef
+        .where('timestamp', '<', oneHourAgo)
+        .get();
+
+      const batch = admin.firestore().batch();
+      let count = 0;
+
+      oldLogs.forEach((doc) => {
+        batch.delete(doc.ref);
+        count++;
+      });
+
+      if (count > 0) {
+        await batch.commit();
+        console.log(`${count}개의 오래된 강화 로그 삭제 완료`);
+      }
+    } catch (err) {
+      console.error('로그 정리 실패:', err);
+    }
+  });
