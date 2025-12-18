@@ -1,6 +1,8 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { SUCCESS_RATES, DOWNGRADE_RATES, DESTROY_RATES, ENHANCE_COST, getSellPrice, MAX_LEVEL } from '../utils/constants';
 import { playEnhanceStart, playSuccess, playFail, playDestroyed, playSell } from '../utils/sounds';
+import { db } from '../utils/firebase';
+import { doc, getDoc } from 'firebase/firestore';
 
 // 암호학적으로 안전한 난수 생성 (0~100 사이 소수점 2자리)
 const secureRandom = () => {
@@ -83,11 +85,42 @@ export const useEnhance = (initialLevel = 0, initialGold = 50000) => {
   const [activeEvent, setActiveEvent] = useState(null); // 현재 발동된 이벤트
   const [eventMultiplier, setEventMultiplier] = useState(1); // 황금찬스 배율
 
-  const baseSuccessRate = SUCCESS_RATES[level] || 1;
+  // 🔥 Firebase에서 불러온 설정
+  const [settings, setSettings] = useState({
+    successRates: SUCCESS_RATES,
+    downgradeRates: DOWNGRADE_RATES,
+    destroyRates: DESTROY_RATES,
+    enhanceCosts: ENHANCE_COST,
+  });
+
+  // 🔥 Firebase에서 설정 불러오기
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const settingsRef = doc(db, 'settings', 'enhance');
+        const snapshot = await getDoc(settingsRef);
+        if (snapshot.exists()) {
+          const data = snapshot.data();
+          setSettings({
+            successRates: data.successRates || SUCCESS_RATES,
+            downgradeRates: data.downgradeRates || DOWNGRADE_RATES,
+            destroyRates: data.destroyRates || DESTROY_RATES,
+            enhanceCosts: data.enhanceCosts || ENHANCE_COST,
+          });
+        }
+      } catch (err) {
+        console.error('설정 불러오기 실패:', err);
+      }
+    };
+    fetchSettings();
+  }, []);
+
+  // 🔥 Firebase settings 사용
+  const baseSuccessRate = settings.successRates[level] || 1;
   const successRate = buffs.passion ? Math.min(baseSuccessRate * 2, 100) : baseSuccessRate;
-  const downgradeRate = DOWNGRADE_RATES[level] || 0;
-  const destroyRate = DESTROY_RATES[level] || 0;
-  const enhanceCost = buffs.freeEnhance ? 0 : (ENHANCE_COST[level] || 100);
+  const downgradeRate = settings.downgradeRates[level] || 0;
+  const destroyRate = settings.destroyRates[level] || 0;
+  const enhanceCost = buffs.freeEnhance ? 0 : (settings.enhanceCosts[level] || 100);
   const canEnhance = !isEnhancing && !isDestroyed && gold >= enhanceCost && level < MAX_LEVEL;
 
   const getEnhanceTime = (lvl) => {
@@ -227,7 +260,7 @@ export const useEnhance = (initialLevel = 0, initialGold = 50000) => {
       }
     }
     setTimeout(() => setIsEnhancing(false), 500);
-  }, [canEnhance, level, baseSuccessRate, downgradeRate, destroyRate, enhanceCost, buffs, failStreak]);
+  }, [canEnhance, level, baseSuccessRate, downgradeRate, destroyRate, enhanceCost, buffs, failStreak, itemStats, settings]);
 
   const sell = useCallback(() => {
     if (isEnhancing || isDestroyed || level === 0) return;
