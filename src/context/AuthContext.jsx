@@ -73,6 +73,7 @@ export const AuthProvider = ({ children }) => {
         id: res.id.toString(),
         nickname: res.properties?.nickname || '사용자',
         profileImage: res.properties?.profile_image || null,
+        email: res.kakao_account?.email || null,
       };
       await saveUserToFirestore(kakaoUser);
     } catch (err) {
@@ -103,6 +104,10 @@ export const AuthProvider = ({ children }) => {
           createdAt: new Date().toISOString(),
           lastLogin: new Date().toISOString(),
         };
+        // email도 저장
+        if (kakaoUser.email) {
+          userData.email = kakaoUser.email;
+        }
         await setDoc(userRef, userData);
       }
 
@@ -148,7 +153,7 @@ export const AuthProvider = ({ children }) => {
     
     window.Kakao.Auth.authorize({
       redirectUri: redirectUri,
-      scope: 'profile_nickname,profile_image',
+      scope: 'profile_nickname,profile_image,account_email',
     });
   };
 

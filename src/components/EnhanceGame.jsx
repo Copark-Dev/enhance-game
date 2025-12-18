@@ -20,7 +20,6 @@ const EnhanceGame = () => {
     canEnhance, enhance, sell, reset, addGold, setResult, setGold, setStats
   } = useEnhance(0, user?.gold || 50000);
 
-  const [itemImage, setItemImage] = useState(null);
   const sellRange = SELL_PRICE[level] || { min: 0, max: 0 };
 
   // 유저 데이터로 초기화
@@ -51,18 +50,42 @@ const EnhanceGame = () => {
     }
   }, [result, setResult, level]);
 
-  const handleImageUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => setItemImage(e.target.result);
-      reader.readAsDataURL(file);
-    }
-  };
-
   const handleLogout = () => {
     logout();
     navigate('/login');
+  };
+
+  const handleShare = () => {
+    if (!window.Kakao) {
+      alert('카카오 SDK 로드 실패');
+      return;
+    }
+    const tierName = tierGuide.find(t => {
+      const [start, end] = t.range.replace('+', '').split('~').map(Number);
+      return level >= start && level <= end;
+    })?.label || '일반';
+
+    window.Kakao.Share.sendDefault({
+      objectType: 'feed',
+      content: {
+        title: '⚔️ 강화 시뮬레이터',
+        description: `${user?.nickname || '사용자'}님의 기록\n🏆 최고 +${stats.maxLevel} (${tierName})\n🎯 성공률 ${stats.attempts > 0 ? ((stats.successes / stats.attempts) * 100).toFixed(1) : 0}%`,
+        imageUrl: 'https://copark-dev.github.io/enhance-game/og-image.png',
+        link: {
+          mobileWebUrl: 'https://copark-dev.github.io/enhance-game/',
+          webUrl: 'https://copark-dev.github.io/enhance-game/',
+        },
+      },
+      buttons: [
+        {
+          title: '나도 강화하기',
+          link: {
+            mobileWebUrl: 'https://copark-dev.github.io/enhance-game/',
+            webUrl: 'https://copark-dev.github.io/enhance-game/',
+          },
+        },
+      ],
+    });
   };
 
   const tierGuide = [
@@ -80,13 +103,18 @@ const EnhanceGame = () => {
       <div style={styles.bgGlow} />
       
       <div style={styles.topBar}>
-        <motion.button onClick={() => navigate('/admin')} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} style={styles.adminBtn}>
-          ⚙️ 어드민
-        </motion.button>
-        
+        {user?.email === 'psw4887@naver.com' && (
+          <motion.button onClick={() => navigate('/admin')} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} style={styles.adminBtn}>
+            ⚙️ 어드민
+          </motion.button>
+        )}
+
         <div style={styles.userInfo}>
           {user?.profileImage && <img src={user.profileImage} alt='profile' style={styles.profileImg} />}
           <span style={styles.userName}>{user?.nickname || '사용자'}</span>
+          <motion.button onClick={handleShare} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} style={styles.shareBtn}>
+            📤 공유
+          </motion.button>
           <motion.button onClick={handleLogout} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} style={styles.logoutBtn}>
             로그아웃
           </motion.button>
@@ -95,21 +123,14 @@ const EnhanceGame = () => {
 
       <motion.h1 initial={{ y: -50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} style={styles.title}>⚔️ 강화 시뮬레이터</motion.h1>
       
-      <div style={styles.uploadArea}>
-        <label style={styles.uploadBtn}>📷 커스텀 이미지<input type='file' accept='image/*' onChange={handleImageUpload} style={{ display: 'none' }} /></label>
-        {itemImage && <button onClick={() => setItemImage(null)} style={styles.removeBtn}>✕</button>}
-      </div>
-
       <div style={styles.goldArea}>
         <span style={styles.goldIcon}>🪙</span>
         <span style={styles.goldAmount}>{formatGold(gold)}</span>
-        <button onClick={() => addGold(10000)} style={styles.addBtn}>+1만</button>
-        <button onClick={() => addGold(100000)} style={styles.addBtn}>+10만</button>
       </div>
 
       <div style={styles.itemArea}>
         <ParticleEffect trigger={result} type={result || 'success'} level={level} />
-        <ItemDisplay level={level} isEnhancing={isEnhancing} result={result} isDestroyed={isDestroyed} itemImage={itemImage} />
+        <ItemDisplay level={level} isEnhancing={isEnhancing} result={result} isDestroyed={isDestroyed} />
       </div>
 
       <div style={styles.priceInfo}>
@@ -148,7 +169,7 @@ const EnhanceGame = () => {
 };
 
 const styles = {
-  container: { minHeight: '100vh', background: 'linear-gradient(180deg, #0a0a1a 0%, #151530 50%, #0a0a1a 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', paddingTop: 80, paddingBottom: 20, paddingLeft: 20, paddingRight: 20, fontFamily: 'Noto Sans KR, sans-serif', position: 'relative', overflow: 'hidden' },
+  container: { minHeight: '100vh', background: 'linear-gradient(180deg, #0a0a1a 0%, #151530 50%, #0a0a1a 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', paddingTop: 60, paddingBottom: 20, paddingLeft: 20, paddingRight: 20, fontFamily: 'Noto Sans KR, sans-serif', position: 'relative', overflow: 'hidden' },
   bgGlow: { position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: 500, height: 500, background: 'radial-gradient(circle, rgba(80,80,150,0.2) 0%, transparent 70%)', pointerEvents: 'none' },
   topBar: { position: 'fixed', top: 0, left: 0, right: 0, display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 20px', backgroundColor: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(10px)', zIndex: 100 },
   adminBtn: { padding: '8px 14px', backgroundColor: '#333', color: '#fff', border: '1px solid #555', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 'bold' },
@@ -156,15 +177,16 @@ const styles = {
   profileImg: { width: 32, height: 32, borderRadius: '50%', border: '2px solid #FFD700' },
   userName: { color: '#fff', fontSize: 14, fontWeight: 'bold' },
   logoutBtn: { padding: '6px 12px', backgroundColor: '#F44336', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 12 },
-  title: { color: '#FFD700', fontSize: '2rem', marginBottom: 15, marginTop: 0, textShadow: '0 0 30px rgba(255,215,0,0.6)', zIndex: 1 },
-  uploadArea: { display: 'flex', gap: 10, marginBottom: 12, zIndex: 1 },
+  shareBtn: { padding: '6px 12px', backgroundColor: '#FEE500', color: '#000', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 'bold' },
+  title: { color: '#FFD700', fontSize: '1.8rem', marginBottom: 10, marginTop: 0, textShadow: '0 0 30px rgba(255,215,0,0.6)', zIndex: 1 },
+  uploadArea: { display: 'flex', gap: 10, marginBottom: 8, zIndex: 1 },
   uploadBtn: { padding: '8px 16px', backgroundColor: '#2a2a4a', color: '#FFF', borderRadius: 20, cursor: 'pointer', fontSize: 14, border: '1px solid #444' },
   removeBtn: { padding: '8px 12px', backgroundColor: '#F44336', color: '#FFF', border: 'none', borderRadius: 20, cursor: 'pointer' },
   goldArea: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18, zIndex: 1 },
   goldIcon: { fontSize: 28 },
   goldAmount: { color: '#FFD700', fontSize: 26, fontWeight: 'bold', textShadow: '0 0 10px rgba(255,215,0,0.5)', minWidth: 100 },
   addBtn: { padding: '6px 12px', backgroundColor: '#FFD700', color: '#000', border: 'none', borderRadius: 15, cursor: 'pointer', fontSize: 13, fontWeight: 'bold' },
-  itemArea: { position: 'relative', width: 320, height: 320, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 15, zIndex: 1 },
+  itemArea: { position: 'relative', width: 280, height: 280, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 10, zIndex: 1 },
   priceInfo: { display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 15, padding: '12px 20px', backgroundColor: 'rgba(0,0,0,0.4)', borderRadius: 12, zIndex: 1 },
   priceRow: { display: 'flex', justifyContent: 'space-between', gap: 30, fontSize: 14 },
   priceLabel: { color: '#888' },

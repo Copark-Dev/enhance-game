@@ -2,14 +2,14 @@ import { motion } from 'framer-motion';
 import { getLevelColor, getLevelTier, MAX_LEVEL, getEffectIntensity } from '../utils/constants';
 import { useImages } from '../context/ImageContext';
 
-const ItemDisplay = ({ level, isEnhancing, result, isDestroyed, itemImage }) => {
+const ItemDisplay = ({ level, isEnhancing, result, isDestroyed }) => {
   const color = getLevelColor(level);
   const tier = getLevelTier(level);
   const intensity = getEffectIntensity(level);
   const { levelImages } = useImages();
 
-  // 레벨별 이미지 또는 사용자 업로드 이미지 사용
-  const displayImage = levelImages[level] || itemImage;
+  // 레벨별 이미지 사용
+  const displayImage = levelImages[level];
 
   return (
     <div style={{ position: 'relative', width: 260, height: 260 }}>

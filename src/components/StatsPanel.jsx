@@ -13,7 +13,7 @@ const StatsPanel = ({ stats, gold }) => {
       animate={{ opacity: 1, x: 0 }}
       style={{
         position: 'fixed',
-        top: 20,
+        top: 70,
         right: 20,
         padding: 16,
         backgroundColor: 'rgba(0,0,0,0.85)',
