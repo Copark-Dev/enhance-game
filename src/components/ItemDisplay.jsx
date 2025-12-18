@@ -418,15 +418,17 @@ const ItemDisplay = ({ level, isEnhancing, result, isDestroyed }) => {
         )}
       </motion.div>
 
-      {!isDestroyed && !isEnhancing && level >= 15 && (
-        <div
+      {/* 아이들 상태에서 은은한 글로우 효과 */}
+      {!isDestroyed && !isEnhancing && level > 0 && (
+        <motion.div
+          animate={{ opacity: [0.3, 0.5, 0.3] }}
+          transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
           style={{
             position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
-            width: 220, height: 220, borderRadius: '50%',
-            background: level >= 19
-              ? 'conic-gradient(from 0deg, #ff000033, #ff880033, #ffff0033, #00ff0033, #00ffff33, #0088ff33, #ff00ff33, #ff000033)'
-              : 'conic-gradient(from 0deg, ' + color + '22, transparent, ' + color + '22, transparent)',
-            filter: 'blur(15px)',
+            width: 200, height: 200, borderRadius: '50%',
+            background: 'radial-gradient(circle, ' + color + '30 0%, transparent 70%)',
+            filter: 'blur(20px)',
+            pointerEvents: 'none',
           }}
         />
       )}
