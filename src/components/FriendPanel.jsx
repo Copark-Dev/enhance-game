@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { formatGold, getLevelColor, getLevelTier } from '../utils/constants';
+import { sanitizeString, sanitizeNumber } from '../utils/security';
 
 const FriendPanel = ({ isOpen, onClose, onGoldChange }) => {
   const { user, searchUserByNickname, addFriend, removeFriend, getFriendsList, sendGold } = useAuth();
@@ -31,9 +32,10 @@ const FriendPanel = ({ isOpen, onClose, onGoldChange }) => {
   };
 
   const handleSearch = async () => {
-    if (!searchQuery.trim()) return;
+    const sanitized = sanitizeString(searchQuery.trim());
+    if (!sanitized) return;
     setLoading(true);
-    const results = await searchUserByNickname(searchQuery);
+    const results = await searchUserByNickname(sanitized);
     setSearchResults(results);
     setLoading(false);
   };
@@ -59,8 +61,8 @@ const FriendPanel = ({ isOpen, onClose, onGoldChange }) => {
   };
 
   const handleSendGold = async (friendId) => {
-    const amount = parseInt(giftAmount);
-    if (isNaN(amount) || amount < 100) {
+    const amount = sanitizeNumber(giftAmount, 0, Number.MAX_SAFE_INTEGER); // JS 안전 정수 범위
+    if (amount < 100) {
       setMessage({ text: '최소 100G 이상 입력하세요', type: 'error' });
       setTimeout(() => setMessage({ text: '', type: 'success' }), 2000);
       return;

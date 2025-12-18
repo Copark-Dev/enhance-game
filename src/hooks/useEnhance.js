@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { SUCCESS_RATES, DOWNGRADE_RATES, DESTROY_RATES, ENHANCE_COST, getSellPrice, MAX_LEVEL } from '../utils/constants';
 import { playEnhanceStart, playSuccess, playFail, playDestroyed, playSell } from '../utils/sounds';
 
@@ -15,6 +15,22 @@ const secureRandom01 = () => {
   crypto.getRandomValues(array);
   return array[0] / 4294967295;
 };
+
+// Rate limiter (연속 클릭 방지)
+const createRateLimiter = (minIntervalMs) => {
+  let lastAction = 0;
+  return () => {
+    const now = Date.now();
+    if (now - lastAction < minIntervalMs) {
+      return false; // 너무 빠른 연속 클릭
+    }
+    lastAction = now;
+    return true;
+  };
+};
+
+// Rate limiter 인스턴스 (노가다 버튼용 - 100ms 간격)
+const grindLimiter = createRateLimiter(100);
 
 export const useEnhance = (initialLevel = 0, initialGold = 50000) => {
   const [level, setLevel] = useState(initialLevel);
@@ -201,8 +217,11 @@ export const useEnhance = (initialLevel = 0, initialGold = 50000) => {
     setLastSellPrice(null);
   }, []);
 
-  // 💎 잭팟 추가된 addGold
+  // 💎 잭팟 추가된 addGold (Rate limited)
   const addGold = useCallback((amount) => {
+    // Rate limit 체크 (너무 빠른 클릭 방지)
+    if (!grindLimiter()) return;
+
     // 0.1% 확률로 잭팟
     if (secureRandom01() < 0.001) {
       setGold((g) => g + 10000);

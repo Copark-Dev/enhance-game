@@ -102,10 +102,15 @@ export const getEffectIntensity = (level) => {
 };
 
 export const formatGold = (amount) => {
-  if (amount >= 100000000) return (amount / 100000000).toFixed(1) + '억';
-  if (amount >= 10000000) return (amount / 10000).toFixed(0) + '만';
-  if (amount >= 10000) return (amount / 10000).toFixed(1) + '만';
-  return amount.toLocaleString();
+  const absAmount = Math.abs(amount);
+  const sign = amount < 0 ? '-' : '';
+
+  if (absAmount >= 10000000000000000) return sign + (absAmount / 10000000000000000).toFixed(1) + '경';
+  if (absAmount >= 1000000000000) return sign + (absAmount / 1000000000000).toFixed(1) + '조';
+  if (absAmount >= 100000000) return sign + (absAmount / 100000000).toFixed(1) + '억';
+  if (absAmount >= 10000000) return sign + (absAmount / 10000).toFixed(0) + '만';
+  if (absAmount >= 10000) return sign + (absAmount / 10000).toFixed(1) + '만';
+  return sign + absAmount.toLocaleString();
 };
 
 export const MAX_LEVEL = 20;
