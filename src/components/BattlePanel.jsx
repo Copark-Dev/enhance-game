@@ -364,7 +364,7 @@ const BattlePanel = ({ isOpen, onClose, currentUser, userStats, inventory = [], 
                             }}
                           >
                             <img
-                              src={opp.avatar || '/default-avatar.png'}
+                              src={opp.profileImage || '/default-avatar.png'}
                               alt=""
                               style={styles.oppAvatar}
                               onError={(e) => { e.target.src = '/default-avatar.png'; }}
@@ -437,7 +437,7 @@ const BattlePanel = ({ isOpen, onClose, currentUser, userStats, inventory = [], 
               <span style={{ color: '#888' }}>승률</span>
               <span style={{ color: '#4CAF50' }}>
                 {userStats?.battles > 0
-                  ? Math.round((userStats?.battleWins / userStats?.battles) * 100)
+                  ? Math.round((userStats?.wins / userStats?.battles) * 100)
                   : 0}%
               </span>
             </div>

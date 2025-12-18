@@ -109,9 +109,11 @@ const DailyRewardPanel = ({ isOpen, onClose, user, onClaimReward }) => {
 
           <div style={styles.rewardGrid}>
             {rewards.map((r) => {
-              const isClaimed = streak >= r.day && !canClaim;
-              const isCurrent = streak + 1 === r.day && canClaim;
-              const isLocked = streak + 1 < r.day || (streak >= r.day && !canClaim && r.day > streak);
+              // 7일 사이클로 표시 (8일차 이후는 다시 1일차부터)
+              const displayStreak = streak % 7;
+              const isClaimed = (streak >= r.day || (streak >= 7 && r.day <= displayStreak)) && !canClaim;
+              const isCurrent = canClaim && ((displayStreak + 1 === r.day) || (streak >= 6 && r.day === 7));
+              const isLocked = !isClaimed && !isCurrent;
 
               return (
                 <div
