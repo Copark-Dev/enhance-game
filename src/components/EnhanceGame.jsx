@@ -144,12 +144,12 @@ const EnhanceGame = () => {
           </div>
           <span style={styles.goldAmount} className="gold-amount">{formatGold(gold)}</span>
           <motion.button
-            onClick={() => addGold(5)}
+            onClick={() => addGold(10)}
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             style={styles.grindBtn}
           >
-            ⛏️ +5
+            ⛏️ +10
           </motion.button>
         </div>
       </div>
