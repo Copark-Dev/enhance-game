@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { db } from '../utils/firebase';
-import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
 
 const AuthContext = createContext();
 
@@ -167,11 +167,11 @@ export const AuthProvider = ({ children }) => {
 
   const updateUserData = async (data) => {
     if (!user) return;
-    
+
     const updatedUser = { ...user, ...data };
     setUser(updatedUser);
     localStorage.setItem('kakaoUser', JSON.stringify(updatedUser));
-    
+
     try {
       const userRef = doc(db, 'users', user.id);
       await updateDoc(userRef, data);
@@ -180,8 +180,94 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // 닉네임으로 사용자 검색
+  const searchUserByNickname = async (nickname) => {
+    if (!nickname.trim()) return [];
+    try {
+      const usersRef = collection(db, 'users');
+      const q = query(usersRef, where('nickname', '==', nickname.trim()));
+      const querySnapshot = await getDocs(q);
+      const results = [];
+      querySnapshot.forEach((doc) => {
+        if (doc.id !== user?.id) { // 자기 자신 제외
+          results.push({ id: doc.id, ...doc.data() });
+        }
+      });
+      return results;
+    } catch (err) {
+      console.error('검색 실패:', err);
+      return [];
+    }
+  };
+
+  // 친구 추가
+  const addFriend = async (friendId) => {
+    if (!user || friendId === user.id) return false;
+    const currentFriends = user.friends || [];
+    if (currentFriends.includes(friendId)) return false;
+
+    const newFriends = [...currentFriends, friendId];
+    await updateUserData({ friends: newFriends });
+    return true;
+  };
+
+  // 친구 삭제
+  const removeFriend = async (friendId) => {
+    if (!user) return false;
+    const currentFriends = user.friends || [];
+    const newFriends = currentFriends.filter(id => id !== friendId);
+    await updateUserData({ friends: newFriends });
+    return true;
+  };
+
+  // 친구 목록 가져오기 (상세 정보 포함)
+  const getFriendsList = async () => {
+    if (!user || !user.friends || user.friends.length === 0) return [];
+    const friendsData = [];
+    for (const friendId of user.friends) {
+      try {
+        const friendRef = doc(db, 'users', friendId);
+        const friendSnap = await getDoc(friendRef);
+        if (friendSnap.exists()) {
+          friendsData.push({ id: friendId, ...friendSnap.data() });
+        }
+      } catch (err) {
+        console.error('친구 정보 로드 실패:', friendId);
+      }
+    }
+    return friendsData;
+  };
+
+  // 골드 선물하기
+  const sendGold = async (friendId, amount) => {
+    if (!user || amount <= 0 || amount > user.gold) return { success: false, message: '골드가 부족합니다' };
+
+    try {
+      // 내 골드 차감
+      const newGold = user.gold - amount;
+      await updateUserData({ gold: newGold });
+
+      // 상대방 골드 증가
+      const friendRef = doc(db, 'users', friendId);
+      const friendSnap = await getDoc(friendRef);
+      if (friendSnap.exists()) {
+        const friendData = friendSnap.data();
+        const friendNewGold = (friendData.gold || 0) + amount;
+        await updateDoc(friendRef, { gold: friendNewGold });
+        return { success: true, message: `${amount}G를 선물했습니다!` };
+      }
+      return { success: false, message: '친구를 찾을 수 없습니다' };
+    } catch (err) {
+      console.error('선물 실패:', err);
+      return { success: false, message: '선물 실패' };
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, loginWithKakao, logout, updateUserData }}>
+    <AuthContext.Provider value={{
+      user, loading, loginWithKakao, logout, updateUserData,
+      searchUserByNickname, addFriend, removeFriend, getFriendsList, sendGold
+    }}>
       {children}
     </AuthContext.Provider>
   );

@@ -10,6 +10,7 @@ import EnhanceButton from './EnhanceButton';
 import ParticleEffect from './ParticleEffect';
 import ResultOverlay from './ResultOverlay';
 import StatsPanel from './StatsPanel';
+import FriendPanel from './FriendPanel';
 
 const EnhanceGame = () => {
   const navigate = useNavigate();
@@ -23,6 +24,7 @@ const EnhanceGame = () => {
   } = useEnhance(0, user?.gold || 50000);
 
   const [showMobileStats, setShowMobileStats] = useState(false);
+  const [showFriendPanel, setShowFriendPanel] = useState(false);
   const sellRange = SELL_PRICE[level] || { min: 0, max: 0 };
 
   // 유저 데이터로 초기화
@@ -132,6 +134,9 @@ const EnhanceGame = () => {
           <span style={styles.userName} className="user-name">{user?.nickname || '사용자'}</span>
           <motion.button onClick={() => setShowMobileStats(true)} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} style={styles.statsBtn} className="mobile-stats-btn">
             📊
+          </motion.button>
+          <motion.button onClick={() => setShowFriendPanel(true)} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} style={styles.friendBtn}>
+            👥
           </motion.button>
           <motion.button onClick={handleShare} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} style={styles.shareBtn}>
             📤 공유
@@ -266,6 +271,7 @@ const EnhanceGame = () => {
 
       <StatsPanel stats={stats} gold={gold} isMobileOpen={showMobileStats} onClose={() => setShowMobileStats(false)} />
       <ResultOverlay result={result} level={level} lastSellPrice={lastSellPrice} isNewRecord={isNewRecord} />
+      <FriendPanel isOpen={showFriendPanel} onClose={() => setShowFriendPanel(false)} />
     </div>
   );
 };
@@ -284,6 +290,7 @@ const styles = {
   logoutBtn: { padding: '6px 12px', backgroundColor: '#F44336', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 12 },
   shareBtn: { padding: '6px 12px', backgroundColor: '#FEE500', color: '#000', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 'bold' },
   statsBtn: { padding: '6px 10px', backgroundColor: '#2196F3', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 14, alignItems: 'center', justifyContent: 'center' },
+  friendBtn: { padding: '6px 10px', backgroundColor: '#9C27B0', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 14 },
   title: { color: '#FFD700', fontSize: '1.5rem', marginBottom: 5, marginTop: 0, textShadow: '0 0 30px rgba(255,215,0,0.6)', zIndex: 1 },
   uploadArea: { display: 'flex', gap: 10, marginBottom: 8, zIndex: 1 },
   uploadBtn: { padding: '8px 16px', backgroundColor: '#2a2a4a', color: '#FFF', borderRadius: 20, cursor: 'pointer', fontSize: 14, border: '1px solid #444' },
