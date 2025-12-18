@@ -19,7 +19,7 @@ const EnhanceGame = () => {
   const {
     level, gold, isEnhancing, result, isDestroyed, stats, lastSellPrice, isNewRecord,
     successRate, downgradeRate, destroyRate, enhanceCost, inventory,
-    buffs, activeEvent, eventMultiplier,
+    buffs, activeEvent, eventMultiplier, lastRoll,
     canEnhance, enhance, sell, reset, addGold, setResult, setGold, setStats,
     setLevel, setInventory, setBuffs, storeItem, takeItem
   } = useEnhance(0, user?.gold || 50000);
@@ -221,7 +221,7 @@ const EnhanceGame = () => {
           <div style={styles.priceRow}><span style={styles.priceLabel}>판매 예상가</span><span style={styles.priceSell}>{formatGold(sellRange.min)} ~ {formatGold(sellRange.max)} G</span></div>
         </div>
 
-        <RateDisplay successRate={successRate} downgradeRate={downgradeRate} destroyRate={destroyRate} />
+        <RateDisplay successRate={successRate} downgradeRate={downgradeRate} destroyRate={destroyRate} lastRoll={lastRoll} />
 
         <div style={styles.buttonArea}>
           {isDestroyed ? (

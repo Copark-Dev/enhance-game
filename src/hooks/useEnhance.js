@@ -2,6 +2,20 @@ import { useState, useCallback } from 'react';
 import { SUCCESS_RATES, DOWNGRADE_RATES, DESTROY_RATES, ENHANCE_COST, getSellPrice, MAX_LEVEL } from '../utils/constants';
 import { playEnhanceStart, playSuccess, playFail, playDestroyed, playSell } from '../utils/sounds';
 
+// 암호학적으로 안전한 난수 생성 (0~100 사이 소수점 2자리)
+const secureRandom = () => {
+  const array = new Uint32Array(1);
+  crypto.getRandomValues(array);
+  return (array[0] / 4294967295) * 100; // 0 ~ 100
+};
+
+// 0~1 사이 난수
+const secureRandom01 = () => {
+  const array = new Uint32Array(1);
+  crypto.getRandomValues(array);
+  return array[0] / 4294967295;
+};
+
 export const useEnhance = (initialLevel = 0, initialGold = 50000) => {
   const [level, setLevel] = useState(initialLevel);
   const [gold, setGold] = useState(initialGold);
@@ -10,6 +24,7 @@ export const useEnhance = (initialLevel = 0, initialGold = 50000) => {
   const [isDestroyed, setIsDestroyed] = useState(false);
   const [lastSellPrice, setLastSellPrice] = useState(null);
   const [isNewRecord, setIsNewRecord] = useState(false);
+  const [lastRoll, setLastRoll] = useState(null); // 마지막 주사위 값 (투명성)
   const [stats, setStats] = useState({ attempts: 0, successes: 0, failures: 0, maxLevel: 0, totalSpent: 0, totalEarned: 0 });
   const [inventory, setInventory] = useState([]);
 
@@ -63,7 +78,8 @@ export const useEnhance = (initialLevel = 0, initialGold = 50000) => {
     const enhanceTime = getEnhanceTime(level);
     await new Promise((r) => setTimeout(r, enhanceTime));
 
-    const roll = Math.random() * 100;
+    const roll = secureRandom();
+    setLastRoll(roll.toFixed(2)); // 투명성을 위해 저장
     const currentSuccessRate = buffs.passion ? Math.min(baseSuccessRate * 2, 100) : baseSuccessRate;
     const isSuccess = roll < currentSuccessRate;
 
@@ -74,7 +90,7 @@ export const useEnhance = (initialLevel = 0, initialGold = 50000) => {
 
     if (isSuccess) {
       // ⚡ 럭키 강화 체크 (5% 확률로 +2)
-      const isLucky = Math.random() < 0.05;
+      const isLucky = secureRandom01() < 0.05;
       const levelGain = isLucky ? 2 : 1;
       const newLevel = Math.min(level + levelGain, MAX_LEVEL);
 
@@ -93,7 +109,7 @@ export const useEnhance = (initialLevel = 0, initialGold = 50000) => {
       playSuccess(newLevel);
 
       // 🌟 축복 체크 (성공 시 5% 확률)
-      if (Math.random() < 0.05) {
+      if (secureRandom01() < 0.05) {
         setBuffs(b => ({ ...b, blessing: true }));
         setTimeout(() => triggerEvent('blessing'), 500);
       }
@@ -109,7 +125,7 @@ export const useEnhance = (initialLevel = 0, initialGold = 50000) => {
         setTimeout(() => triggerEvent('passion'), 500);
       }
 
-      const destroyRoll = Math.random() * 100;
+      const destroyRoll = secureRandom();
       const shouldDestroy = destroyRoll < destroyRate;
 
       // 🛡️ 보호막 체크
@@ -126,7 +142,7 @@ export const useEnhance = (initialLevel = 0, initialGold = 50000) => {
         playDestroyed();
 
         // 🛡️ 파괴 후 20% 확률로 보호막 획득
-        if (Math.random() < 0.2) {
+        if (secureRandom01() < 0.2) {
           setBuffs(b => ({ ...b, shield: true }));
           setTimeout(() => triggerEvent('shieldGain'), 1000);
         }
@@ -136,7 +152,7 @@ export const useEnhance = (initialLevel = 0, initialGold = 50000) => {
           setBuffs(b => ({ ...b, blessing: false }));
           triggerEvent('blessingUsed');
         } else {
-          const downgradeRoll = Math.random() * 100;
+          const downgradeRoll = secureRandom();
           if (downgradeRoll < downgradeRate) {
             setLevel((l) => Math.max(0, l - 1));
           }
@@ -155,8 +171,8 @@ export const useEnhance = (initialLevel = 0, initialGold = 50000) => {
     let multiplier = 1;
 
     // 💰 황금 찬스 (10% 확률로 2~5배)
-    if (Math.random() < 0.1) {
-      multiplier = 2 + Math.floor(Math.random() * 4); // 2, 3, 4, 5
+    if (secureRandom01() < 0.1) {
+      multiplier = 2 + Math.floor(secureRandom01() * 4); // 2, 3, 4, 5
       setEventMultiplier(multiplier);
       triggerEvent('goldenChance');
     }
@@ -170,7 +186,7 @@ export const useEnhance = (initialLevel = 0, initialGold = 50000) => {
     playSell();
 
     // 🎁 무료 강화권 (15% 확률)
-    if (Math.random() < 0.15) {
+    if (secureRandom01() < 0.15) {
       setBuffs(b => ({ ...b, freeEnhance: true }));
       setTimeout(() => triggerEvent('freeEnhance'), 1500);
     }
@@ -188,7 +204,7 @@ export const useEnhance = (initialLevel = 0, initialGold = 50000) => {
   // 💎 잭팟 추가된 addGold
   const addGold = useCallback((amount) => {
     // 0.1% 확률로 잭팟
-    if (Math.random() < 0.001) {
+    if (secureRandom01() < 0.001) {
       setGold((g) => g + 10000);
       triggerEvent('jackpot');
     } else {
@@ -224,7 +240,7 @@ export const useEnhance = (initialLevel = 0, initialGold = 50000) => {
   return {
     level, gold, isEnhancing, result, isDestroyed, stats, lastSellPrice, isNewRecord,
     successRate, downgradeRate, destroyRate, enhanceCost, inventory,
-    buffs, activeEvent, eventMultiplier, failStreak,
+    buffs, activeEvent, eventMultiplier, failStreak, lastRoll,
     canEnhance, enhance, sell, reset, addGold, setResult,
     setGold, setStats, setLevel, setInventory, setBuffs, storeItem, takeItem
   };
