@@ -1,5 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
+import { getMessaging, getToken, onMessage } from 'firebase/messaging';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -12,4 +13,42 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
+
+// Firebase Messaging 초기화
+let messaging = null;
+try {
+  messaging = getMessaging(app);
+} catch (err) {
+  console.log('FCM not supported in this browser');
+}
+
+// FCM 토큰 요청
+export const requestFCMToken = async () => {
+  if (!messaging) return null;
+
+  try {
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') {
+      console.log('알림 권한 거부됨');
+      return null;
+    }
+
+    const token = await getToken(messaging, {
+      vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY
+    });
+    console.log('FCM Token:', token);
+    return token;
+  } catch (err) {
+    console.error('FCM 토큰 요청 실패:', err);
+    return null;
+  }
+};
+
+// 포그라운드 메시지 수신
+export const onForegroundMessage = (callback) => {
+  if (!messaging) return () => {};
+  return onMessage(messaging, callback);
+};
+
+export { messaging };
 export default app;

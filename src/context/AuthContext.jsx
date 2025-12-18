@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
-import { db } from '../utils/firebase';
+import { db, requestFCMToken, onForegroundMessage } from '../utils/firebase';
 import { doc, getDoc, setDoc, updateDoc, collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
 
 const AuthContext = createContext();
@@ -477,12 +477,83 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // FCM 토큰 저장
+  const saveFCMToken = async () => {
+    if (!user) return null;
+    try {
+      const token = await requestFCMToken();
+      if (token) {
+        await updateUserData({ fcmToken: token });
+        console.log('FCM 토큰 저장 완료');
+        return token;
+      }
+    } catch (err) {
+      console.error('FCM 토큰 저장 실패:', err);
+    }
+    return null;
+  };
+
+  // 포그라운드 알림 설정
+  useEffect(() => {
+    const unsubscribe = onForegroundMessage((payload) => {
+      console.log('포그라운드 메시지:', payload);
+      // 브라우저 알림 표시
+      if (Notification.permission === 'granted') {
+        new Notification(payload.notification?.title || '강화 시뮬레이터', {
+          body: payload.notification?.body,
+          icon: '/images/items/10.png'
+        });
+      }
+    });
+    return unsubscribe;
+  }, []);
+
+  // 10강 이상 달성 시 친구들에게 알림 전송
+  const notifyFriendsHighEnhance = async (newLevel) => {
+    if (!user || newLevel < 10) return;
+    if (!user.friends || user.friends.length === 0) return;
+
+    try {
+      // 친구들의 FCM 토큰 가져오기
+      const friendTokens = [];
+      for (const friendId of user.friends) {
+        const friendRef = doc(db, 'users', friendId);
+        const friendSnap = await getDoc(friendRef);
+        if (friendSnap.exists()) {
+          const friendData = friendSnap.data();
+          if (friendData.fcmToken) {
+            friendTokens.push(friendData.fcmToken);
+          }
+        }
+      }
+
+      if (friendTokens.length === 0) return;
+
+      // 알림 데이터 저장 (Firebase Functions에서 처리)
+      const notifRef = doc(collection(db, 'enhanceNotifications'));
+      await setDoc(notifRef, {
+        senderId: user.id,
+        senderName: user.nickname,
+        senderImage: user.profileImage,
+        level: newLevel,
+        tokens: friendTokens,
+        timestamp: new Date().toISOString(),
+        processed: false
+      });
+
+      console.log(`${friendTokens.length}명의 친구에게 알림 전송 예약`);
+    } catch (err) {
+      console.error('친구 알림 전송 실패:', err);
+    }
+  };
+
   return (
     <AuthContext.Provider value={{
       user, loading, loginWithKakao, logout, updateUserData,
       searchUserByNickname, addFriend, removeFriend, getFriendsList, sendGold,
       getRankings, claimDailyReward, claimAchievement, updateBattleStats,
-      getRandomOpponents, saveBattleNotification, getBattleNotifications, markBattleNotificationsRead
+      getRandomOpponents, saveBattleNotification, getBattleNotifications, markBattleNotificationsRead,
+      saveFCMToken, notifyFriendsHighEnhance
     }}>
       {children}
     </AuthContext.Provider>

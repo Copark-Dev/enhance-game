@@ -78,7 +78,7 @@ exports.updateRanking = functions.firestore
   .onUpdate(async (change, context) => {
     const newData = change.after.data();
     const userId = context.params.userId;
-    
+
     if (newData.stats?.maxLevel > 0) {
       await admin.firestore().collection('rankings').doc(userId).set({
         nickname: newData.nickname,
@@ -87,5 +87,93 @@ exports.updateRanking = functions.firestore
         totalEarned: newData.stats.totalEarned,
         updatedAt: admin.firestore.FieldValue.serverTimestamp()
       }, { merge: true });
+    }
+  });
+
+// 10강 이상 달성 알림 전송
+exports.sendEnhanceNotification = functions.firestore
+  .document('enhanceNotifications/{notifId}')
+  .onCreate(async (snap, context) => {
+    const data = snap.data();
+
+    if (data.processed) return;
+
+    const { senderName, level, tokens } = data;
+
+    if (!tokens || tokens.length === 0) {
+      console.log('전송할 토큰이 없습니다');
+      return;
+    }
+
+    // 푸시 알림 메시지 구성
+    const message = {
+      notification: {
+        title: '친구의 강화 소식!',
+        body: `${senderName}님이 +${level}강에 성공했습니다!`
+      },
+      data: {
+        type: 'enhance_success',
+        level: level.toString(),
+        senderName: senderName
+      },
+      tokens: tokens
+    };
+
+    try {
+      const response = await admin.messaging().sendEachForMulticast(message);
+      console.log(`알림 전송 완료: 성공 ${response.successCount}, 실패 ${response.failureCount}`);
+
+      // 처리 완료 표시
+      await snap.ref.update({ processed: true, result: {
+        successCount: response.successCount,
+        failureCount: response.failureCount
+      }});
+    } catch (err) {
+      console.error('푸시 알림 전송 실패:', err);
+      await snap.ref.update({ processed: true, error: err.message });
+    }
+  });
+
+// 배틀 알림 푸시 전송
+exports.sendBattleNotification = functions.firestore
+  .document('battleNotifications/{notifId}')
+  .onCreate(async (snap, context) => {
+    const data = snap.data();
+
+    // 상대방의 FCM 토큰 가져오기
+    const recipientRef = admin.firestore().collection('users').doc(data.recipientId);
+    const recipientSnap = await recipientRef.get();
+
+    if (!recipientSnap.exists) return;
+
+    const recipientData = recipientSnap.data();
+    const fcmToken = recipientData.fcmToken;
+
+    if (!fcmToken) {
+      console.log('상대방의 FCM 토큰이 없습니다');
+      return;
+    }
+
+    const won = !data.attackerWon; // 수신자 기준 승패
+    const message = {
+      notification: {
+        title: won ? '배틀 승리!' : '배틀 도전!',
+        body: won
+          ? `${data.attackerName}님의 도전을 물리쳤습니다!`
+          : `${data.attackerName}님에게 패배했습니다...`
+      },
+      data: {
+        type: 'battle',
+        attackerId: data.attackerId,
+        won: won.toString()
+      },
+      token: fcmToken
+    };
+
+    try {
+      await admin.messaging().send(message);
+      console.log('배틀 알림 푸시 전송 완료');
+    } catch (err) {
+      console.error('배틀 푸시 전송 실패:', err);
     }
   });

@@ -19,12 +19,14 @@ import RankingPanel from './RankingPanel';
 import BattlePanel from './BattlePanel';
 import BattleNotificationModal from './BattleNotificationModal';
 import BottomNavigation from './BottomNavigation';
+import InstallPromptModal, { shouldShowInstallPrompt } from './InstallPromptModal';
 
 const EnhanceGame = () => {
   const navigate = useNavigate();
   const {
     user, logout, updateUserData, getRankings, claimDailyReward, claimAchievement, updateBattleStats,
-    getRandomOpponents, saveBattleNotification, getBattleNotifications, markBattleNotificationsRead
+    getRandomOpponents, saveBattleNotification, getBattleNotifications, markBattleNotificationsRead,
+    saveFCMToken, notifyFriendsHighEnhance
   } = useAuth();
   const {
     level, gold, isEnhancing, result, isDestroyed, stats, lastSellPrice, isNewRecord,
@@ -44,6 +46,7 @@ const EnhanceGame = () => {
   const [isMuted, setIsMuted] = useState(getMuteStatus());
   const [battleNotifications, setBattleNotifications] = useState([]);
   const [showBattleNotifications, setShowBattleNotifications] = useState(false);
+  const [showInstallPrompt, setShowInstallPrompt] = useState(false);
   const sellRange = SELL_PRICE[level] || { min: 0, max: 0 };
 
   // 유저 데이터로 초기화
@@ -74,6 +77,35 @@ const EnhanceGame = () => {
       }
     };
     checkBattleNotifications();
+  }, [user]);
+
+  // FCM 토큰 요청 (로그인 후)
+  useEffect(() => {
+    if (user && saveFCMToken) {
+      // 3초 후 알림 권한 요청 (사용자 경험 개선)
+      const timer = setTimeout(() => {
+        saveFCMToken();
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [user]);
+
+  // 10강 이상 성공 시 친구들에게 알림
+  useEffect(() => {
+    if (result === 'success' && level >= 10 && notifyFriendsHighEnhance) {
+      notifyFriendsHighEnhance(level);
+    }
+  }, [result, level]);
+
+  // 홈 화면 추가 가이드 (모바일 웹 사용자만)
+  useEffect(() => {
+    if (user && shouldShowInstallPrompt()) {
+      // 5초 후 표시 (사용자 경험 개선)
+      const timer = setTimeout(() => {
+        setShowInstallPrompt(true);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
   }, [user]);
 
   // 데이터 변경시 Firebase 저장
@@ -380,6 +412,12 @@ const EnhanceGame = () => {
           }
           setBattleNotifications([]);
         }}
+      />
+
+      {/* 홈 화면 추가 가이드 모달 */}
+      <InstallPromptModal
+        isOpen={showInstallPrompt}
+        onClose={() => setShowInstallPrompt(false)}
       />
 
       {/* 하단 네비게이션 */}
