@@ -8,6 +8,9 @@ import { db } from '../utils/firebase';
 import { collection, getDocs, doc, updateDoc } from 'firebase/firestore';
 
 const ADMIN_EMAIL = 'psw4887@naver.com';
+const ADMIN_NICKNAME = '박세완';
+
+const isAdmin = (user) => user?.email === ADMIN_EMAIL || user?.nickname === ADMIN_NICKNAME;
 
 const AdminPage = () => {
   const navigate = useNavigate();
@@ -21,7 +24,7 @@ const AdminPage = () => {
 
   // 어드민 체크
   useEffect(() => {
-    if (user && user.email !== ADMIN_EMAIL) {
+    if (user && !isAdmin(user)) {
       navigate('/');
     }
   }, [user, navigate]);
@@ -77,7 +80,7 @@ const AdminPage = () => {
 
   const levels = Array.from({ length: 21 }, (_, i) => i);
 
-  if (!user || user.email !== ADMIN_EMAIL) {
+  if (!user || !isAdmin(user)) {
     return (
       <div style={styles.container}>
         <div style={{ color: '#fff', textAlign: 'center', paddingTop: 100 }}>

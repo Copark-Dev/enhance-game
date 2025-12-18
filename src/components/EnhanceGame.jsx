@@ -101,9 +101,10 @@ const EnhanceGame = () => {
   return (
     <div style={styles.container}>
       <div style={styles.bgGlow} />
-      
+
+      {/* 상단 고정바 */}
       <div style={styles.topBar}>
-        {user?.email === 'psw4887@naver.com' && (
+        {(user?.email === 'psw4887@naver.com' || user?.nickname === '박세완') && (
           <motion.button onClick={() => navigate('/admin')} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} style={styles.adminBtn}>
             ⚙️ 어드민
           </motion.button>
@@ -121,43 +122,53 @@ const EnhanceGame = () => {
         </div>
       </div>
 
-      <motion.h1 initial={{ y: -50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} style={styles.title}>⚔️ 강화 시뮬레이터</motion.h1>
-      
-      <div style={styles.goldArea}>
-        <span style={styles.goldIcon}>🪙</span>
-        <span style={styles.goldAmount}>{formatGold(gold)}</span>
-      </div>
-
-      <div style={styles.itemArea}>
-        <ParticleEffect trigger={result} type={result || 'success'} level={level} />
-        <ItemDisplay level={level} isEnhancing={isEnhancing} result={result} isDestroyed={isDestroyed} />
-      </div>
-
-      <div style={styles.priceInfo}>
-        <div style={styles.priceRow}><span style={styles.priceLabel}>강화 비용</span><span style={styles.priceCost}>{formatGold(enhanceCost)} G</span></div>
-        <div style={styles.priceRow}><span style={styles.priceLabel}>판매 예상가</span><span style={styles.priceSell}>{formatGold(sellRange.min)} ~ {formatGold(sellRange.max)} G</span></div>
-      </div>
-
-      <RateDisplay successRate={successRate} downgradeRate={downgradeRate} destroyRate={destroyRate} />
-
-      <div style={styles.buttonArea}>
-        {isDestroyed ? (
-          <motion.button onClick={reset} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} style={styles.resetBtn}>🔄 다시 시작</motion.button>
-        ) : (
-          <div style={styles.buttonRow}>
-            <EnhanceButton onClick={enhance} disabled={!canEnhance} isEnhancing={isEnhancing} isMax={level >= MAX_LEVEL} />
-            <motion.button onClick={sell} disabled={isEnhancing || level === 0}
-              whileHover={!isEnhancing && level > 0 ? { scale: 1.05 } : {}}
-              whileTap={!isEnhancing && level > 0 ? { scale: 0.95 } : {}}
-              style={{ ...styles.sellBtn, opacity: isEnhancing || level === 0 ? 0.4 : 1, cursor: isEnhancing || level === 0 ? 'not-allowed' : 'pointer' }}>
-              💰 판매
-            </motion.button>
+      {/* 메인 게임 영역 - 화면 중앙 */}
+      <div style={styles.mainContent}>
+        {/* 상단 정보 */}
+        <div style={styles.topSection}>
+          <motion.h1 initial={{ y: -30, opacity: 0 }} animate={{ y: 0, opacity: 1 }} style={styles.title}>⚔️ 강화 시뮬레이터</motion.h1>
+          <div style={styles.goldArea}>
+            <span style={styles.goldIcon}>🪙</span>
+            <span style={styles.goldAmount}>{formatGold(gold)}</span>
           </div>
-        )}
+        </div>
+
+        {/* 아이템 영역 - 정중앙 */}
+        <div style={styles.itemArea}>
+          <ParticleEffect trigger={result} type={result || 'success'} level={level} />
+          <ItemDisplay level={level} isEnhancing={isEnhancing} result={result} isDestroyed={isDestroyed} />
+        </div>
+
+        {/* 하단 컨트롤 */}
+        <div style={styles.bottomSection}>
+          <div style={styles.priceInfo}>
+            <div style={styles.priceRow}><span style={styles.priceLabel}>강화 비용</span><span style={styles.priceCost}>{formatGold(enhanceCost)} G</span></div>
+            <div style={styles.priceRow}><span style={styles.priceLabel}>판매 예상가</span><span style={styles.priceSell}>{formatGold(sellRange.min)} ~ {formatGold(sellRange.max)} G</span></div>
+          </div>
+
+          <RateDisplay successRate={successRate} downgradeRate={downgradeRate} destroyRate={destroyRate} />
+
+          <div style={styles.buttonArea}>
+            {isDestroyed ? (
+              <motion.button onClick={reset} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} style={styles.resetBtn}>🔄 다시 시작</motion.button>
+            ) : (
+              <div style={styles.buttonRow}>
+                <EnhanceButton onClick={enhance} disabled={!canEnhance} isEnhancing={isEnhancing} isMax={level >= MAX_LEVEL} />
+                <motion.button onClick={sell} disabled={isEnhancing || level === 0}
+                  whileHover={!isEnhancing && level > 0 ? { scale: 1.05 } : {}}
+                  whileTap={!isEnhancing && level > 0 ? { scale: 0.95 } : {}}
+                  style={{ ...styles.sellBtn, opacity: isEnhancing || level === 0 ? 0.4 : 1, cursor: isEnhancing || level === 0 ? 'not-allowed' : 'pointer' }}>
+                  💰 판매
+                </motion.button>
+              </div>
+            )}
+          </div>
+
+          {gold < enhanceCost && !isDestroyed && level < MAX_LEVEL && <div style={styles.warning}>⚠️ 골드 부족! (필요: {formatGold(enhanceCost)}G)</div>}
+        </div>
       </div>
 
-      {gold < enhanceCost && !isDestroyed && level < MAX_LEVEL && <div style={styles.warning}>⚠️ 골드 부족! (필요: {formatGold(enhanceCost)}G)</div>}
-
+      {/* 하단 티어 가이드 */}
       <div style={styles.tierGuide}>
         {tierGuide.map((t) => (<div key={t.range} style={{ color: t.color, textAlign: 'center' }}><div style={{ fontSize: 11 }}>{t.label}</div><div style={{ fontSize: 13, fontWeight: 'bold' }}>{t.range}</div></div>))}
       </div>
@@ -169,7 +180,10 @@ const EnhanceGame = () => {
 };
 
 const styles = {
-  container: { minHeight: '100vh', background: 'linear-gradient(180deg, #0a0a1a 0%, #151530 50%, #0a0a1a 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', paddingTop: 60, paddingBottom: 20, paddingLeft: 20, paddingRight: 20, fontFamily: 'Noto Sans KR, sans-serif', position: 'relative', overflow: 'hidden' },
+  container: { minHeight: '100vh', background: 'linear-gradient(180deg, #0a0a1a 0%, #151530 50%, #0a0a1a 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between', paddingTop: 70, paddingBottom: 20, paddingLeft: 20, paddingRight: 20, fontFamily: 'Noto Sans KR, sans-serif', position: 'relative', overflow: 'hidden' },
+  mainContent: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, width: '100%', gap: 10 },
+  topSection: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 },
+  bottomSection: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 },
   bgGlow: { position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: 500, height: 500, background: 'radial-gradient(circle, rgba(80,80,150,0.2) 0%, transparent 70%)', pointerEvents: 'none' },
   topBar: { position: 'fixed', top: 0, left: 0, right: 0, display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 20px', backgroundColor: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(10px)', zIndex: 100 },
   adminBtn: { padding: '8px 14px', backgroundColor: '#333', color: '#fff', border: '1px solid #555', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 'bold' },
@@ -178,7 +192,7 @@ const styles = {
   userName: { color: '#fff', fontSize: 14, fontWeight: 'bold' },
   logoutBtn: { padding: '6px 12px', backgroundColor: '#F44336', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 12 },
   shareBtn: { padding: '6px 12px', backgroundColor: '#FEE500', color: '#000', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 'bold' },
-  title: { color: '#FFD700', fontSize: '1.8rem', marginBottom: 10, marginTop: 0, textShadow: '0 0 30px rgba(255,215,0,0.6)', zIndex: 1 },
+  title: { color: '#FFD700', fontSize: '1.5rem', marginBottom: 5, marginTop: 0, textShadow: '0 0 30px rgba(255,215,0,0.6)', zIndex: 1 },
   uploadArea: { display: 'flex', gap: 10, marginBottom: 8, zIndex: 1 },
   uploadBtn: { padding: '8px 16px', backgroundColor: '#2a2a4a', color: '#FFF', borderRadius: 20, cursor: 'pointer', fontSize: 14, border: '1px solid #444' },
   removeBtn: { padding: '8px 12px', backgroundColor: '#F44336', color: '#FFF', border: 'none', borderRadius: 20, cursor: 'pointer' },
