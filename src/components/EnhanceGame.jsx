@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useEnhance } from '../hooks/useEnhance';
 import { useAuth } from '../context/AuthContext';
 import { MAX_LEVEL, formatGold, SELL_PRICE, getLevelColor, getLevelTier } from '../utils/constants';
+import { toggleMute, getMuteStatus } from '../utils/sounds';
 import ItemDisplay from './ItemDisplay';
 import RateDisplay from './RateDisplay';
 import EnhanceButton from './EnhanceButton';
@@ -12,10 +13,14 @@ import ResultOverlay from './ResultOverlay';
 import StatsPanel from './StatsPanel';
 import FriendPanel from './FriendPanel';
 import GuidePanel from './GuidePanel';
+import DailyRewardPanel from './DailyRewardPanel';
+import AchievementPanel from './AchievementPanel';
+import RankingPanel from './RankingPanel';
+import BattlePanel from './BattlePanel';
 
 const EnhanceGame = () => {
   const navigate = useNavigate();
-  const { user, logout, updateUserData } = useAuth();
+  const { user, logout, updateUserData, getRankings, claimDailyReward, claimAchievement, updateBattleStats, getFriendsList } = useAuth();
   const {
     level, gold, isEnhancing, result, isDestroyed, stats, lastSellPrice, isNewRecord,
     successRate, downgradeRate, destroyRate, enhanceCost, inventory,
@@ -27,6 +32,11 @@ const EnhanceGame = () => {
   const [showMobileStats, setShowMobileStats] = useState(false);
   const [showFriendPanel, setShowFriendPanel] = useState(false);
   const [showGuide, setShowGuide] = useState(false);
+  const [showDailyReward, setShowDailyReward] = useState(false);
+  const [showAchievement, setShowAchievement] = useState(false);
+  const [showRanking, setShowRanking] = useState(false);
+  const [showBattle, setShowBattle] = useState(false);
+  const [isMuted, setIsMuted] = useState(getMuteStatus());
   const sellRange = SELL_PRICE[level] || { min: 0, max: 0 };
 
   // 유저 데이터로 초기화
@@ -153,6 +163,26 @@ const EnhanceGame = () => {
           </motion.button>
           <motion.button onClick={() => setShowGuide(true)} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} style={styles.guideBtn}>
             ❓
+          </motion.button>
+          <motion.button onClick={() => setShowDailyReward(true)} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} style={styles.dailyBtn}>
+            🎁
+          </motion.button>
+          <motion.button onClick={() => setShowAchievement(true)} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} style={styles.achieveBtn}>
+            🏆
+          </motion.button>
+          <motion.button onClick={() => setShowRanking(true)} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} style={styles.rankBtn}>
+            🏅
+          </motion.button>
+          <motion.button onClick={() => setShowBattle(true)} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} style={styles.battleBtn}>
+            ⚔️
+          </motion.button>
+          <motion.button
+            onClick={() => { toggleMute(); setIsMuted(!isMuted); }}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            style={styles.soundBtn}
+          >
+            {isMuted ? '🔇' : '🔊'}
           </motion.button>
           <motion.button onClick={handleShare} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} style={styles.shareBtn}>
             📤 공유
@@ -295,6 +325,45 @@ const EnhanceGame = () => {
       <ResultOverlay result={result} level={level} lastSellPrice={lastSellPrice} isNewRecord={isNewRecord} />
       <FriendPanel isOpen={showFriendPanel} onClose={() => setShowFriendPanel(false)} onGoldChange={setGold} />
       <GuidePanel isOpen={showGuide} onClose={() => setShowGuide(false)} />
+      <DailyRewardPanel
+        isOpen={showDailyReward}
+        onClose={() => setShowDailyReward(false)}
+        user={user}
+        onClaimReward={(reward, streak) => {
+          claimDailyReward(reward, streak);
+          setGold(g => g + reward);
+        }}
+      />
+      <AchievementPanel
+        isOpen={showAchievement}
+        onClose={() => setShowAchievement(false)}
+        stats={stats}
+        claimedAchievements={user?.claimedAchievements || []}
+        onClaimAchievement={(id, reward) => {
+          claimAchievement(id, reward);
+          setGold(g => g + reward);
+        }}
+      />
+      <RankingPanel
+        isOpen={showRanking}
+        onClose={() => setShowRanking(false)}
+        currentUser={user}
+        getRankings={getRankings}
+      />
+      <BattlePanel
+        isOpen={showBattle}
+        onClose={() => setShowBattle(false)}
+        currentUser={user}
+        userStats={user?.battleStats}
+        inventory={inventory.map((lvl, idx) => ({ id: idx, level: lvl }))}
+        getFriendsList={getFriendsList}
+        onBattle={(result) => {
+          updateBattleStats(result.won, result.reward);
+          if (result.won) {
+            setGold(g => g + result.reward);
+          }
+        }}
+      />
     </div>
   );
 };
@@ -315,6 +384,11 @@ const styles = {
   statsBtn: { padding: '6px 10px', backgroundColor: '#2196F3', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 14, alignItems: 'center', justifyContent: 'center' },
   friendBtn: { padding: '6px 10px', backgroundColor: '#9C27B0', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 14 },
   guideBtn: { padding: '6px 10px', backgroundColor: '#FF9800', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 14 },
+  dailyBtn: { padding: '6px 10px', backgroundColor: '#E91E63', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 14 },
+  achieveBtn: { padding: '6px 10px', backgroundColor: '#FFD700', color: '#000', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 14 },
+  rankBtn: { padding: '6px 10px', backgroundColor: '#00BCD4', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 14 },
+  battleBtn: { padding: '6px 10px', backgroundColor: '#F44336', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 14 },
+  soundBtn: { padding: '6px 10px', backgroundColor: '#607D8B', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 14 },
   title: { color: '#FFD700', fontSize: '1.5rem', marginBottom: 5, marginTop: 0, textShadow: '0 0 30px rgba(255,215,0,0.6)', zIndex: 1 },
   uploadArea: { display: 'flex', gap: 10, marginBottom: 8, zIndex: 1 },
   uploadBtn: { padding: '8px 16px', backgroundColor: '#2a2a4a', color: '#FFF', borderRadius: 20, cursor: 'pointer', fontSize: 14, border: '1px solid #444' },

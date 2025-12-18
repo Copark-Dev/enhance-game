@@ -1,5 +1,6 @@
 // Web Audio API 기반 사운드 시스템
 let audioContext = null;
+let isMuted = localStorage.getItem('soundMuted') === 'true';
 
 const getAudioContext = () => {
   if (!audioContext) {
@@ -8,8 +9,23 @@ const getAudioContext = () => {
   return audioContext;
 };
 
+// 음소거 토글
+export const toggleMute = () => {
+  isMuted = !isMuted;
+  localStorage.setItem('soundMuted', isMuted.toString());
+  return isMuted;
+};
+
+export const getMuteStatus = () => isMuted;
+
+export const setMute = (muted) => {
+  isMuted = muted;
+  localStorage.setItem('soundMuted', isMuted.toString());
+};
+
 // 기본 사운드 생성 함수
 const playTone = (frequency, duration, type = 'sine', volume = 0.3) => {
+  if (isMuted) return; // 음소거 시 재생 안함
   try {
     const ctx = getAudioContext();
     const oscillator = ctx.createOscillator();

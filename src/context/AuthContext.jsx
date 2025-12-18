@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { db } from '../utils/firebase';
-import { doc, getDoc, setDoc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
 
 const AuthContext = createContext();
 
@@ -263,10 +263,123 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // 랭킹 가져오기
+  const getRankings = async () => {
+    try {
+      const usersRef = collection(db, 'users');
+      const rankings = {
+        maxLevel: [],
+        totalEarned: [],
+        successes: [],
+        battleWins: []
+      };
+
+      // 모든 사용자 가져오기 (최대 100명)
+      const querySnapshot = await getDocs(query(usersRef, limit(100)));
+      const users = [];
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        users.push({
+          odtxkd: doc.id,
+          nickname: data.nickname,
+          avatar: data.profileImage,
+          maxLevel: data.stats?.maxLevel || 0,
+          totalEarned: data.stats?.totalEarned || 0,
+          successes: data.stats?.successes || 0,
+          battleWins: data.battleStats?.wins || 0
+        });
+      });
+
+      // 각 카테고리별 정렬
+      rankings.maxLevel = [...users]
+        .sort((a, b) => b.maxLevel - a.maxLevel)
+        .slice(0, 20)
+        .map(u => ({ ...u, value: u.maxLevel }));
+
+      rankings.totalEarned = [...users]
+        .sort((a, b) => b.totalEarned - a.totalEarned)
+        .slice(0, 20)
+        .map(u => ({ ...u, value: u.totalEarned }));
+
+      rankings.successes = [...users]
+        .sort((a, b) => b.successes - a.successes)
+        .slice(0, 20)
+        .map(u => ({ ...u, value: u.successes }));
+
+      rankings.battleWins = [...users]
+        .sort((a, b) => b.battleWins - a.battleWins)
+        .slice(0, 20)
+        .map(u => ({ ...u, value: u.battleWins }));
+
+      return rankings;
+    } catch (err) {
+      console.error('랭킹 로드 실패:', err);
+      return { maxLevel: [], totalEarned: [], successes: [], battleWins: [] };
+    }
+  };
+
+  // 일일 보상 수령
+  const claimDailyReward = async (reward, newStreak) => {
+    if (!user) return false;
+    try {
+      const newGold = (user.gold || 0) + reward;
+      await updateUserData({
+        gold: newGold,
+        lastDailyReward: new Date().toISOString(),
+        dailyStreak: newStreak
+      });
+      return true;
+    } catch (err) {
+      console.error('일일 보상 수령 실패:', err);
+      return false;
+    }
+  };
+
+  // 업적 보상 수령
+  const claimAchievement = async (achievementId, reward) => {
+    if (!user) return false;
+    try {
+      const claimedAchievements = user.claimedAchievements || [];
+      if (claimedAchievements.includes(achievementId)) return false;
+
+      const newGold = (user.gold || 0) + reward;
+      await updateUserData({
+        gold: newGold,
+        claimedAchievements: [...claimedAchievements, achievementId]
+      });
+      return true;
+    } catch (err) {
+      console.error('업적 보상 수령 실패:', err);
+      return false;
+    }
+  };
+
+  // 배틀 결과 업데이트
+  const updateBattleStats = async (won, reward) => {
+    if (!user) return false;
+    try {
+      const battleStats = user.battleStats || { battles: 0, wins: 0 };
+      const newBattleStats = {
+        battles: battleStats.battles + 1,
+        wins: battleStats.wins + (won ? 1 : 0)
+      };
+      const newGold = won ? (user.gold || 0) + reward : user.gold;
+      await updateUserData({
+        gold: newGold,
+        battleStats: newBattleStats
+      });
+      return true;
+    } catch (err) {
+      console.error('배틀 결과 업데이트 실패:', err);
+      return false;
+    }
+  };
+
   return (
     <AuthContext.Provider value={{
       user, loading, loginWithKakao, logout, updateUserData,
-      searchUserByNickname, addFriend, removeFriend, getFriendsList, sendGold
+      searchUserByNickname, addFriend, removeFriend, getFriendsList, sendGold,
+      getRankings, claimDailyReward, claimAchievement, updateBattleStats
     }}>
       {children}
     </AuthContext.Provider>
