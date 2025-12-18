@@ -116,7 +116,7 @@ const BottomNavigation = ({
 
         {/* 더보기 */}
         <div style={styles.navItem} onClick={() => handleMenuClick('more')}>
-          <div style={styles.navIcon}>☰</div>
+          <div style={styles.navIcon}>⚙️</div>
           <span style={styles.navLabel}>더보기</span>
           <AnimatePresence>
             {activeMenu === 'more' && (
