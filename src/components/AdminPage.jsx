@@ -420,9 +420,14 @@ const AdminPage = () => {
 const styles = {
   container: {
     minHeight: '100vh',
+    maxHeight: '100vh',
+    overflowY: 'auto',
+    overflowX: 'hidden',
     background: 'linear-gradient(180deg, #0a0a1a 0%, #151530 50%, #0a0a1a 100%)',
     padding: 20,
+    paddingBottom: 40,
     fontFamily: 'Noto Sans KR, sans-serif',
+    WebkitOverflowScrolling: 'touch', // iOS 부드러운 스크롤
   },
   header: {
     display: 'flex',
