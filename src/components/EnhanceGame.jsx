@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useEnhance } from '../hooks/useEnhance';
 import { useAuth } from '../context/AuthContext';
 import { MAX_LEVEL, formatGold, SELL_PRICE, getLevelColor, getLevelTier } from '../utils/constants';
@@ -17,8 +17,9 @@ const EnhanceGame = () => {
   const {
     level, gold, isEnhancing, result, isDestroyed, stats, lastSellPrice, isNewRecord,
     successRate, downgradeRate, destroyRate, enhanceCost, inventory,
+    buffs, activeEvent, eventMultiplier,
     canEnhance, enhance, sell, reset, addGold, setResult, setGold, setStats,
-    setLevel, setInventory, storeItem, takeItem
+    setLevel, setInventory, setBuffs, storeItem, takeItem
   } = useEnhance(0, user?.gold || 50000);
 
   const [showMobileStats, setShowMobileStats] = useState(false);
@@ -31,18 +32,32 @@ const EnhanceGame = () => {
       if (user.stats) setStats(user.stats);
       if (typeof user.level === 'number') setLevel(user.level);
       if (user.inventory) setInventory(user.inventory);
+      if (user.buffs) setBuffs(user.buffs);
     }
   }, [user]);
 
-  // 데이터 변경시 Firebase 저장 (레벨, 골드, 통계, 인벤토리)
+  // 데이터 변경시 Firebase 저장
   useEffect(() => {
     if (user && !isEnhancing) {
       const saveTimeout = setTimeout(() => {
-        updateUserData({ gold, stats, level, inventory });
+        updateUserData({ gold, stats, level, inventory, buffs });
       }, 1000);
       return () => clearTimeout(saveTimeout);
     }
-  }, [gold, stats, level, inventory, isEnhancing]);
+  }, [gold, stats, level, inventory, buffs, isEnhancing]);
+
+  // 이벤트 메시지
+  const eventMessages = {
+    lucky: '⚡ 럭키 강화! +2 상승!',
+    blessing: '🌟 축복 획득! 다음 하락 방지',
+    blessingUsed: '🌟 축복 발동! 하락 방지됨',
+    passion: '🔥 열정 모드! 성공률 2배',
+    shieldGain: '🛡️ 보호막 획득!',
+    shieldUsed: '🛡️ 보호막 발동! 파괴 방지됨',
+    goldenChance: `💰 황금 찬스! ${eventMultiplier}배 판매!`,
+    freeEnhance: '🎁 무료 강화권 획득!',
+    jackpot: '💎 잭팟!! +10,000G',
+  };
 
   useEffect(() => {
     if (result) {
@@ -152,7 +167,31 @@ const EnhanceGame = () => {
             ⛏️ +10
           </motion.button>
         </div>
+
+        {/* 활성 버프 표시 */}
+        {(buffs.shield || buffs.freeEnhance || buffs.passion || buffs.blessing) && (
+          <div style={styles.buffArea}>
+            {buffs.shield && <span style={styles.buffBadge}>🛡️</span>}
+            {buffs.freeEnhance && <span style={styles.buffBadge}>🎁</span>}
+            {buffs.passion && <span style={{...styles.buffBadge, background: 'linear-gradient(145deg, #FF6B6B, #FF4444)'}}>🔥 2x</span>}
+            {buffs.blessing && <span style={styles.buffBadge}>🌟</span>}
+          </div>
+        )}
       </div>
+
+      {/* 이벤트 알림 */}
+      <AnimatePresence>
+        {activeEvent && (
+          <motion.div
+            initial={{ y: -50, opacity: 0, scale: 0.8 }}
+            animate={{ y: 0, opacity: 1, scale: 1 }}
+            exit={{ y: -50, opacity: 0, scale: 0.8 }}
+            style={styles.eventNotification}
+          >
+            {eventMessages[activeEvent]}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* 하단 UI */}
       <div style={styles.bottomUI}>
@@ -310,6 +349,29 @@ const styles = {
     justifyContent: 'center',
   },
   tierGuide: { display: 'flex', gap: 12, marginTop: 25, padding: '10px 18px', backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 15, zIndex: 1 },
+  buffArea: { display: 'flex', gap: 8, justifyContent: 'center', marginTop: 5 },
+  buffBadge: {
+    padding: '4px 10px',
+    background: 'linear-gradient(145deg, #4a4a6a, #2a2a4a)',
+    borderRadius: 15,
+    fontSize: 14,
+    border: '1px solid #666',
+    color: '#fff',
+  },
+  eventNotification: {
+    position: 'fixed',
+    top: 80,
+    left: '50%',
+    transform: 'translateX(-50%)',
+    padding: '12px 24px',
+    background: 'linear-gradient(145deg, #FFD700, #FFA500)',
+    color: '#000',
+    borderRadius: 20,
+    fontSize: 16,
+    fontWeight: 'bold',
+    boxShadow: '0 4px 20px rgba(255,215,0,0.5)',
+    zIndex: 1000,
+  },
 };
 
 export default EnhanceGame;
