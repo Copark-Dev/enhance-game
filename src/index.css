@@ -19,93 +19,82 @@ button:active { transform: translateY(0); }
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
   padding: 70px 20px 20px;
-}
-
-/* 메인 컨텐츠 - 아이템 중앙 정렬 */
-.main-content {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  flex: 1;
-  width: 100%;
-}
-
-/* 아이템 영역 - 화면 중앙 고정 */
-.item-area {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
 }
 
 /* 모바일 반응형 */
 @media (max-width: 768px) {
   .game-container {
-    padding: 60px 10px 10px;
+    padding: 55px 10px 10px;
   }
 
   .top-bar {
-    padding: 10px 12px !important;
+    padding: 8px 10px !important;
   }
 
   .top-bar .user-info {
-    gap: 6px !important;
+    gap: 5px !important;
   }
 
   .top-bar button {
-    padding: 5px 8px !important;
-    font-size: 11px !important;
+    padding: 4px 8px !important;
+    font-size: 10px !important;
   }
 
   .top-bar .profile-img {
-    width: 28px !important;
-    height: 28px !important;
+    width: 24px !important;
+    height: 24px !important;
   }
 
   .top-bar .user-name {
-    font-size: 12px !important;
+    font-size: 11px !important;
+    max-width: 60px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .game-title {
-    font-size: 1.2rem !important;
+    font-size: 1.1rem !important;
   }
 
   .gold-area {
-    gap: 6px !important;
+    gap: 5px !important;
+    margin-bottom: 10px !important;
   }
 
   .gold-amount {
-    font-size: 20px !important;
-  }
-
-  .item-display-wrapper {
-    transform: scale(0.85);
+    font-size: 18px !important;
   }
 
   .price-info {
-    padding: 10px 15px !important;
-    font-size: 12px !important;
+    padding: 8px 12px !important;
+    font-size: 11px !important;
+    margin-bottom: 8px !important;
   }
 
   .rate-display {
-    font-size: 12px !important;
-    padding: 10px !important;
+    font-size: 11px !important;
+    padding: 8px !important;
   }
 
   .enhance-btn, .sell-btn {
-    padding: 12px 25px !important;
-    font-size: 14px !important;
+    padding: 10px 20px !important;
+    font-size: 13px !important;
   }
 
   .tier-guide {
-    gap: 6px !important;
-    padding: 8px 12px !important;
-    font-size: 10px !important;
+    gap: 4px !important;
+    padding: 6px 10px !important;
+    font-size: 9px !important;
     flex-wrap: wrap;
     justify-content: center;
+    margin-top: 15px !important;
+  }
+
+  .tier-guide > div {
+    min-width: 38px;
   }
 
   .stats-panel {
@@ -114,20 +103,35 @@ button:active { transform: translateY(0); }
 }
 
 @media (max-width: 480px) {
-  .game-title {
-    font-size: 1rem !important;
+  .game-container {
+    padding: 50px 8px 8px;
   }
 
-  .item-display-wrapper {
-    transform: scale(0.75);
+  .game-title {
+    font-size: 0.95rem !important;
+  }
+
+  .gold-amount {
+    font-size: 16px !important;
+  }
+
+  .price-info {
+    font-size: 10px !important;
+    gap: 4px !important;
   }
 
   .button-row {
-    flex-direction: column;
-    gap: 10px !important;
+    flex-direction: row;
+    gap: 8px !important;
   }
 
   .enhance-btn, .sell-btn {
-    width: 100%;
+    padding: 10px 16px !important;
+    font-size: 12px !important;
+  }
+
+  .tier-guide {
+    font-size: 8px !important;
+    gap: 3px !important;
   }
 }

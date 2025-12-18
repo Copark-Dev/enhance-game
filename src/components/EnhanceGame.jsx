@@ -166,10 +166,6 @@ const EnhanceGame = () => {
         </div>
 
         {gold < enhanceCost && !isDestroyed && level < MAX_LEVEL && <div style={styles.warning}>⚠️ 골드 부족! (필요: {formatGold(enhanceCost)}G)</div>}
-
-        <div style={styles.tierGuide} className="tier-guide">
-          {tierGuide.map((t) => (<div key={t.range} style={{ color: t.color, textAlign: 'center' }}><div style={{ fontSize: 11 }}>{t.label}</div><div style={{ fontSize: 13, fontWeight: 'bold' }}>{t.range}</div></div>))}
-        </div>
       </div>
 
       <StatsPanel stats={stats} gold={gold} />

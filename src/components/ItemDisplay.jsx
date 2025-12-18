@@ -14,11 +14,11 @@ const ItemDisplay = ({ level, isEnhancing, result, isDestroyed }) => {
   return (
     <div style={{
       position: 'absolute',
-      top: '50%',
+      top: '45%',
       left: '50%',
       transform: 'translate(-50%, -50%)',
-      width: 260,
-      height: 260,
+      width: 400,
+      height: 400,
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center'
@@ -333,7 +333,7 @@ const ItemDisplay = ({ level, isEnhancing, result, isDestroyed }) => {
         }}
         style={{
           position: 'relative',
-          width: 180, height: 180, borderRadius: 20, pointerEvents: 'auto',
+          width: 280, height: 280, borderRadius: 28, pointerEvents: 'auto',
           background: isDestroyed ? 'linear-gradient(145deg, #1a1a1a, #0a0a0a)' : 'linear-gradient(145deg, #1a1a3a, #0a0a2a)',
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
           border: '3px solid ' + (isDestroyed ? '#333' : color),
@@ -390,7 +390,7 @@ const ItemDisplay = ({ level, isEnhancing, result, isDestroyed }) => {
           }}
           transition={{ duration: level >= 15 ? 0.2 : 0.3, repeat: isEnhancing ? Infinity : 0 }}
           style={{
-            width: 80, height: 80, borderRadius: 12, backgroundColor: 'rgba(0,0,0,0.4)',
+            width: 140, height: 140, borderRadius: 16, backgroundColor: 'rgba(0,0,0,0.4)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             zIndex: 15, overflow: 'hidden', border: '2px solid ' + (isDestroyed ? '#222' : color) + '44',
           }}
@@ -398,7 +398,7 @@ const ItemDisplay = ({ level, isEnhancing, result, isDestroyed }) => {
           {displayImage ? (
             <img src={displayImage} alt='item' style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           ) : (
-            <span style={{ fontSize: 45 }}>{isDestroyed ? '💔' : '⚔️'}</span>
+            <span style={{ fontSize: 70 }}>{isDestroyed ? '💔' : '⚔️'}</span>
           )}
         </motion.div>
 
@@ -408,10 +408,10 @@ const ItemDisplay = ({ level, isEnhancing, result, isDestroyed }) => {
           animate={{ scale: 1, opacity: 1 }}
           transition={{ type: 'spring', damping: 8 }}
           style={{
-            fontSize: 28, fontWeight: 'bold',
+            fontSize: 36, fontWeight: 'bold',
             color: isDestroyed ? '#444' : color,
             textShadow: isDestroyed ? 'none' : '0 0 15px ' + color + ', 0 0 30px ' + color,
-            marginTop: 6, zIndex: 15,
+            marginTop: 10, zIndex: 15,
           }}
         >
           {isDestroyed ? '파괴됨' : '+' + level}
