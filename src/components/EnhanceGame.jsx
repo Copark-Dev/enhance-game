@@ -11,6 +11,7 @@ import ParticleEffect from './ParticleEffect';
 import ResultOverlay from './ResultOverlay';
 import StatsPanel from './StatsPanel';
 import FriendPanel from './FriendPanel';
+import GuidePanel from './GuidePanel';
 
 const EnhanceGame = () => {
   const navigate = useNavigate();
@@ -25,6 +26,7 @@ const EnhanceGame = () => {
 
   const [showMobileStats, setShowMobileStats] = useState(false);
   const [showFriendPanel, setShowFriendPanel] = useState(false);
+  const [showGuide, setShowGuide] = useState(false);
   const sellRange = SELL_PRICE[level] || { min: 0, max: 0 };
 
   // 유저 데이터로 초기화
@@ -148,6 +150,9 @@ const EnhanceGame = () => {
           </motion.button>
           <motion.button onClick={() => setShowFriendPanel(true)} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} style={styles.friendBtn}>
             👥
+          </motion.button>
+          <motion.button onClick={() => setShowGuide(true)} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} style={styles.guideBtn}>
+            ❓
           </motion.button>
           <motion.button onClick={handleShare} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} style={styles.shareBtn}>
             📤 공유
@@ -280,9 +285,16 @@ const EnhanceGame = () => {
         </div>
       </div>
 
-      <StatsPanel stats={stats} gold={gold} isMobileOpen={showMobileStats} onClose={() => setShowMobileStats(false)} />
+      <StatsPanel
+        stats={stats}
+        gold={gold}
+        isMobileOpen={showMobileStats}
+        onClose={() => setShowMobileStats(false)}
+        onResetStats={() => setStats({ attempts: 0, successes: 0, failures: 0, maxLevel: 0, totalSpent: 0, totalEarned: 0 })}
+      />
       <ResultOverlay result={result} level={level} lastSellPrice={lastSellPrice} isNewRecord={isNewRecord} />
       <FriendPanel isOpen={showFriendPanel} onClose={() => setShowFriendPanel(false)} onGoldChange={setGold} />
+      <GuidePanel isOpen={showGuide} onClose={() => setShowGuide(false)} />
     </div>
   );
 };
@@ -302,6 +314,7 @@ const styles = {
   shareBtn: { padding: '6px 12px', backgroundColor: '#FEE500', color: '#000', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 'bold' },
   statsBtn: { padding: '6px 10px', backgroundColor: '#2196F3', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 14, alignItems: 'center', justifyContent: 'center' },
   friendBtn: { padding: '6px 10px', backgroundColor: '#9C27B0', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 14 },
+  guideBtn: { padding: '6px 10px', backgroundColor: '#FF9800', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 14 },
   title: { color: '#FFD700', fontSize: '1.5rem', marginBottom: 5, marginTop: 0, textShadow: '0 0 30px rgba(255,215,0,0.6)', zIndex: 1 },
   uploadArea: { display: 'flex', gap: 10, marginBottom: 8, zIndex: 1 },
   uploadBtn: { padding: '8px 16px', backgroundColor: '#2a2a4a', color: '#FFF', borderRadius: 20, cursor: 'pointer', fontSize: 14, border: '1px solid #444' },
@@ -381,14 +394,16 @@ const styles = {
     top: 80,
     left: '50%',
     transform: 'translateX(-50%)',
-    padding: '12px 24px',
+    padding: '8px 16px',
     background: 'linear-gradient(145deg, #FFD700, #FFA500)',
     color: '#000',
-    borderRadius: 20,
-    fontSize: 16,
+    borderRadius: 15,
+    fontSize: 13,
     fontWeight: 'bold',
     boxShadow: '0 4px 20px rgba(255,215,0,0.5)',
     zIndex: 1000,
+    whiteSpace: 'nowrap',
+    maxWidth: '90%',
   },
 };
 

@@ -1,7 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { getLevelColor, getLevelTier, formatGold } from '../utils/constants';
 
-const StatsPanel = ({ stats, gold, isMobileOpen, onClose }) => {
+const StatsPanel = ({ stats, gold, isMobileOpen, onClose, onResetStats }) => {
   const successRateCalc = stats.attempts > 0 ? ((stats.successes / stats.attempts) * 100).toFixed(1) : 0;
   const maxColor = getLevelColor(stats.maxLevel);
   const maxTier = getLevelTier(stats.maxLevel);
@@ -32,6 +32,7 @@ const StatsPanel = ({ stats, gold, isMobileOpen, onClose }) => {
         maxColor={maxColor}
         maxTier={maxTier}
         profit={profit}
+        onResetStats={onResetStats}
       />
     </motion.div>
   );
@@ -94,6 +95,7 @@ const StatsPanel = ({ stats, gold, isMobileOpen, onClose }) => {
               maxColor={maxColor}
               maxTier={maxTier}
               profit={profit}
+              onResetStats={onResetStats}
               isMobile
             />
           </motion.div>
@@ -110,36 +112,61 @@ const StatsPanel = ({ stats, gold, isMobileOpen, onClose }) => {
   );
 };
 
-const StatsContent = ({ stats, gold, successRateCalc, maxColor, maxTier, profit, isMobile }) => (
-  <>
-    {!isMobile && (
-      <h3 style={{ margin: '0 0 12px 0', color: '#FFD700', fontSize: 16, borderBottom: '1px solid #333', paddingBottom: 8 }}>
-        📊 통계
-      </h3>
-    )}
-    <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? 12 : 8 }}>
-      <StatItem label="🪙 보유 골드" value={formatGold(gold)} color="#FFD700" isMobile={isMobile} />
-      <StatItem label="🎯 총 시도" value={stats.attempts} isMobile={isMobile} />
-      <StatItem label="✅ 성공" value={stats.successes} color="#4CAF50" isMobile={isMobile} />
-      <StatItem label="❌ 실패" value={stats.failures} color="#F44336" isMobile={isMobile} />
-      <StatItem label="📈 성공률" value={successRateCalc + '%'} isMobile={isMobile} />
-      <div style={{ borderTop: '1px solid #444', marginTop: 8, paddingTop: 12 }}>
-        <StatItem label="💸 총 지출" value={formatGold(stats.totalSpent) + ' G'} color="#FF6B6B" isMobile={isMobile} />
-        <StatItem label="💰 총 수익" value={formatGold(stats.totalEarned) + ' G'} color="#4CAF50" isMobile={isMobile} />
-        <StatItem label="📊 손익" value={(profit >= 0 ? '+' : '') + formatGold(profit) + ' G'} color={profit >= 0 ? '#4CAF50' : '#FF6B6B'} isMobile={isMobile} />
-      </div>
-      <div style={{ borderTop: '1px solid #444', marginTop: 8, paddingTop: 12 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: isMobile ? 16 : 14 }}>
-          <span style={{ color: '#AAA' }}>🏆 최고 기록</span>
-          <span style={{ color: maxColor, fontWeight: 'bold', fontSize: isMobile ? 20 : 14 }}>+{stats.maxLevel}</span>
+const StatsContent = ({ stats, gold, successRateCalc, maxColor, maxTier, profit, onResetStats, isMobile }) => {
+  const handleReset = () => {
+    if (confirm('정말 통계를 초기화하시겠습니까?\n(골드와 장비는 유지됩니다)')) {
+      onResetStats && onResetStats();
+    }
+  };
+
+  return (
+    <>
+      {!isMobile && (
+        <h3 style={{ margin: '0 0 12px 0', color: '#FFD700', fontSize: 16, borderBottom: '1px solid #333', paddingBottom: 8 }}>
+          📊 통계
+        </h3>
+      )}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? 12 : 8 }}>
+        <StatItem label="🪙 보유 골드" value={formatGold(gold)} color="#FFD700" isMobile={isMobile} />
+        <StatItem label="🎯 총 시도" value={stats.attempts} isMobile={isMobile} />
+        <StatItem label="✅ 성공" value={stats.successes} color="#4CAF50" isMobile={isMobile} />
+        <StatItem label="❌ 실패" value={stats.failures} color="#F44336" isMobile={isMobile} />
+        <StatItem label="📈 성공률" value={successRateCalc + '%'} isMobile={isMobile} />
+        <div style={{ borderTop: '1px solid #444', marginTop: 8, paddingTop: 12 }}>
+          <StatItem label="💸 총 지출" value={formatGold(stats.totalSpent) + ' G'} color="#FF6B6B" isMobile={isMobile} />
+          <StatItem label="💰 총 수익" value={formatGold(stats.totalEarned) + ' G'} color="#4CAF50" isMobile={isMobile} />
+          <StatItem label="📊 손익" value={(profit >= 0 ? '+' : '') + formatGold(profit) + ' G'} color={profit >= 0 ? '#4CAF50' : '#FF6B6B'} isMobile={isMobile} />
         </div>
-        {stats.maxLevel >= 3 && (
-          <div style={{ textAlign: 'right', fontSize: isMobile ? 14 : 12, color: maxColor, marginTop: 4 }}>{maxTier}</div>
+        <div style={{ borderTop: '1px solid #444', marginTop: 8, paddingTop: 12 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: isMobile ? 16 : 14 }}>
+            <span style={{ color: '#AAA' }}>🏆 최고 기록</span>
+            <span style={{ color: maxColor, fontWeight: 'bold', fontSize: isMobile ? 20 : 14 }}>+{stats.maxLevel}</span>
+          </div>
+          {stats.maxLevel >= 3 && (
+            <div style={{ textAlign: 'right', fontSize: isMobile ? 14 : 12, color: maxColor, marginTop: 4 }}>{maxTier}</div>
+          )}
+        </div>
+        {onResetStats && (
+          <button
+            onClick={handleReset}
+            style={{
+              marginTop: 12,
+              padding: '8px 16px',
+              backgroundColor: 'transparent',
+              border: '1px solid #666',
+              borderRadius: 8,
+              color: '#888',
+              fontSize: 12,
+              cursor: 'pointer',
+            }}
+          >
+            🔄 통계 초기화
+          </button>
         )}
       </div>
-    </div>
-  </>
-);
+    </>
+  );
+};
 
 const StatItem = ({ label, value, color = '#FFF', isMobile }) => (
   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: isMobile ? 15 : 13, marginBottom: isMobile ? 4 : 2 }}>

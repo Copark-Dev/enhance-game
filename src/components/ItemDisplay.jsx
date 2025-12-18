@@ -269,11 +269,11 @@ const ItemDisplay = ({ level, isEnhancing, result, isDestroyed }) => {
             style={{
               position: 'fixed',
               inset: 0,
-              backgroundColor: 'rgba(0,0,0,0.9)',
+              backgroundColor: 'rgba(0,0,0,0.95)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              zIndex: 9999,
+              zIndex: 99999,
               cursor: 'pointer',
               pointerEvents: 'auto',
             }}
@@ -285,32 +285,32 @@ const ItemDisplay = ({ level, isEnhancing, result, isDestroyed }) => {
               onClick={(e) => e.stopPropagation()}
               style={{
                 position: 'relative',
-                padding: 20,
+                padding: 24,
                 background: `linear-gradient(145deg, #1a1a3a, #0a0a2a)`,
-                borderRadius: 24,
-                border: `3px solid ${color}`,
-                boxShadow: `0 0 60px ${color}`,
+                borderRadius: 28,
+                border: `4px solid ${color}`,
+                boxShadow: `0 0 80px ${color}`,
               }}
             >
               <img
                 src={itemImage}
                 alt='item'
                 style={{
-                  width: '70vmin',
-                  height: '70vmin',
-                  maxWidth: 500,
-                  maxHeight: 500,
+                  width: '80vmin',
+                  height: '80vmin',
+                  maxWidth: 600,
+                  maxHeight: 600,
                   objectFit: 'contain',
-                  borderRadius: 16,
+                  borderRadius: 20,
                 }}
               />
               <div style={{
                 textAlign: 'center',
-                marginTop: 16,
+                marginTop: 20,
                 color: color,
-                fontSize: 32,
+                fontSize: 36,
                 fontWeight: 'bold',
-                textShadow: `0 0 20px ${color}`,
+                textShadow: `0 0 30px ${color}`,
               }}>
                 +{level} {tier}
               </div>
@@ -318,15 +318,15 @@ const ItemDisplay = ({ level, isEnhancing, result, isDestroyed }) => {
                 onClick={() => setShowModal(false)}
                 style={{
                   position: 'absolute',
-                  top: -15,
-                  right: -15,
-                  width: 40,
-                  height: 40,
+                  top: -18,
+                  right: -18,
+                  width: 48,
+                  height: 48,
                   borderRadius: '50%',
-                  backgroundColor: '#333',
+                  backgroundColor: '#222',
                   color: '#fff',
-                  border: '2px solid #555',
-                  fontSize: 20,
+                  border: '3px solid #666',
+                  fontSize: 24,
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
