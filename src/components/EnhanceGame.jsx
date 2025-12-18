@@ -305,7 +305,7 @@ const EnhanceGame = () => {
             <motion.button onClick={reset} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} style={styles.resetBtn}>🔄 다시 시작</motion.button>
           ) : (
             <div style={styles.buttonRow} className="button-row">
-              <EnhanceButton onClick={enhance} disabled={!canEnhance} isEnhancing={isEnhancing} isMax={level >= MAX_LEVEL} />
+              <EnhanceButton onClick={enhance} disabled={!canEnhance} isEnhancing={isEnhancing} isMax={level >= MAX_LEVEL} level={level} />
               <motion.button onClick={sell} disabled={isEnhancing || level === 0}
                 whileHover={!isEnhancing && level > 0 ? { scale: 1.05 } : {}}
                 whileTap={!isEnhancing && level > 0 ? { scale: 0.95 } : {}}
