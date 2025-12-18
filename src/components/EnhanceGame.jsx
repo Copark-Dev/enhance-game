@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useEnhance } from '../hooks/useEnhance';
 import { useAuth } from '../context/AuthContext';
-import { MAX_LEVEL, formatGold, SELL_PRICE } from '../utils/constants';
+import { MAX_LEVEL, formatGold, SELL_PRICE, getLevelColor, getLevelTier } from '../utils/constants';
 import ItemDisplay from './ItemDisplay';
 import RateDisplay from './RateDisplay';
 import EnhanceButton from './EnhanceButton';
@@ -16,8 +16,9 @@ const EnhanceGame = () => {
   const { user, logout, updateUserData } = useAuth();
   const {
     level, gold, isEnhancing, result, isDestroyed, stats, lastSellPrice, isNewRecord,
-    successRate, downgradeRate, destroyRate, enhanceCost,
-    canEnhance, enhance, sell, reset, addGold, setResult, setGold, setStats
+    successRate, downgradeRate, destroyRate, enhanceCost, inventory,
+    canEnhance, enhance, sell, reset, addGold, setResult, setGold, setStats,
+    setLevel, setInventory, storeItem, takeItem
   } = useEnhance(0, user?.gold || 50000);
 
   const [showMobileStats, setShowMobileStats] = useState(false);
@@ -27,21 +28,21 @@ const EnhanceGame = () => {
   useEffect(() => {
     if (user) {
       setGold(user.gold || 50000);
-      if (user.stats) {
-        setStats(user.stats);
-      }
+      if (user.stats) setStats(user.stats);
+      if (typeof user.level === 'number') setLevel(user.level);
+      if (user.inventory) setInventory(user.inventory);
     }
   }, [user]);
 
-  // 골드나 통계 변경시 Firebase 저장
+  // 데이터 변경시 Firebase 저장 (레벨, 골드, 통계, 인벤토리)
   useEffect(() => {
     if (user && !isEnhancing) {
       const saveTimeout = setTimeout(() => {
-        updateUserData({ gold, stats });
+        updateUserData({ gold, stats, level, inventory });
       }, 1000);
       return () => clearTimeout(saveTimeout);
     }
-  }, [gold, stats, isEnhancing]);
+  }, [gold, stats, level, inventory, isEnhancing]);
 
   useEffect(() => {
     if (result) {
@@ -175,11 +176,53 @@ const EnhanceGame = () => {
                 style={{ ...styles.sellBtn, opacity: isEnhancing || level === 0 ? 0.4 : 1, cursor: isEnhancing || level === 0 ? 'not-allowed' : 'pointer' }}>
                 💰 판매
               </motion.button>
+              <motion.button onClick={storeItem} disabled={isEnhancing || level === 0 || inventory.length >= 5}
+                whileHover={!isEnhancing && level > 0 && inventory.length < 5 ? { scale: 1.05 } : {}}
+                whileTap={!isEnhancing && level > 0 && inventory.length < 5 ? { scale: 0.95 } : {}}
+                className="store-btn"
+                style={{ ...styles.storeBtn, opacity: isEnhancing || level === 0 || inventory.length >= 5 ? 0.4 : 1, cursor: isEnhancing || level === 0 || inventory.length >= 5 ? 'not-allowed' : 'pointer' }}>
+                📦 보관
+              </motion.button>
             </div>
           )}
         </div>
 
         {gold < enhanceCost && !isDestroyed && level < MAX_LEVEL && <div style={styles.warning}>⚠️ 골드 부족! (필요: {formatGold(enhanceCost)}G)</div>}
+
+        {/* 보관함 */}
+        <div style={styles.inventoryArea} className="inventory-area">
+          <div style={styles.inventoryLabel}>📦 보관함 ({inventory.length}/5)</div>
+          <div style={styles.inventorySlots}>
+            {[0, 1, 2, 3, 4].map((i) => {
+              const itemLevel = inventory[i];
+              const hasItem = itemLevel !== undefined;
+              const color = hasItem ? getLevelColor(itemLevel) : '#333';
+              return (
+                <motion.div
+                  key={i}
+                  onClick={() => hasItem && takeItem(i)}
+                  whileHover={hasItem ? { scale: 1.1 } : {}}
+                  whileTap={hasItem ? { scale: 0.95 } : {}}
+                  style={{
+                    ...styles.inventorySlot,
+                    borderColor: color,
+                    boxShadow: hasItem ? `0 0 10px ${color}` : 'none',
+                    cursor: hasItem ? 'pointer' : 'default',
+                  }}
+                >
+                  {hasItem ? (
+                    <>
+                      <span style={{ color, fontWeight: 'bold', fontSize: 14 }}>+{itemLevel}</span>
+                      <span style={{ color: '#888', fontSize: 9 }}>{getLevelTier(itemLevel)}</span>
+                    </>
+                  ) : (
+                    <span style={{ color: '#444', fontSize: 18 }}>-</span>
+                  )}
+                </motion.div>
+              );
+            })}
+          </div>
+        </div>
       </div>
 
       <StatsPanel stats={stats} gold={gold} isMobileOpen={showMobileStats} onClose={() => setShowMobileStats(false)} />
@@ -250,7 +293,22 @@ const styles = {
   buttonRow: { display: 'flex', gap: 15 },
   resetBtn: { padding: '16px 50px', fontSize: 18, fontWeight: 'bold', color: '#FFF', background: 'linear-gradient(145deg, #4CAF50, #388E3C)', border: 'none', borderRadius: 30, cursor: 'pointer' },
   sellBtn: { padding: '16px 35px', fontSize: 18, fontWeight: 'bold', color: '#000', background: 'linear-gradient(145deg, #FFD700, #FFA000)', border: 'none', borderRadius: 30 },
+  storeBtn: { padding: '16px 25px', fontSize: 18, fontWeight: 'bold', color: '#fff', background: 'linear-gradient(145deg, #6B5B95, #4A4070)', border: 'none', borderRadius: 30 },
   warning: { marginTop: 15, padding: '10px 20px', backgroundColor: 'rgba(255,152,0,0.2)', color: '#FF9800', borderRadius: 10, fontSize: 14, zIndex: 1 },
+  inventoryArea: { marginTop: 12, padding: '10px 16px', backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 12, zIndex: 1 },
+  inventoryLabel: { color: '#888', fontSize: 12, marginBottom: 8, textAlign: 'center' },
+  inventorySlots: { display: 'flex', gap: 8, justifyContent: 'center' },
+  inventorySlot: {
+    width: 48,
+    height: 48,
+    borderRadius: 8,
+    backgroundColor: 'rgba(20,20,40,0.8)',
+    border: '2px solid #333',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   tierGuide: { display: 'flex', gap: 12, marginTop: 25, padding: '10px 18px', backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 15, zIndex: 1 },
 };
 

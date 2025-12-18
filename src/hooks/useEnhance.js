@@ -11,6 +11,7 @@ export const useEnhance = (initialLevel = 0, initialGold = 50000) => {
   const [lastSellPrice, setLastSellPrice] = useState(null);
   const [isNewRecord, setIsNewRecord] = useState(false);
   const [stats, setStats] = useState({ attempts: 0, successes: 0, failures: 0, maxLevel: 0, totalSpent: 0, totalEarned: 0 });
+  const [inventory, setInventory] = useState([]); // 최대 5개 보관
 
   const successRate = SUCCESS_RATES[level] || 1;
   const downgradeRate = DOWNGRADE_RATES[level] || 0;
@@ -94,10 +95,39 @@ export const useEnhance = (initialLevel = 0, initialGold = 50000) => {
 
   const addGold = useCallback((amount) => setGold((g) => g + amount), []);
 
+  // 보관함에 아이템 저장 (최대 5개)
+  const storeItem = useCallback(() => {
+    if (isEnhancing || isDestroyed || level === 0) return false;
+    if (inventory.length >= 5) return false;
+    setInventory((inv) => [...inv, level]);
+    setLevel(0);
+    return true;
+  }, [level, isEnhancing, isDestroyed, inventory.length]);
+
+  // 보관함에서 아이템 꺼내기 (현재 아이템과 교체)
+  const takeItem = useCallback((index) => {
+    if (isEnhancing || isDestroyed) return false;
+    if (index < 0 || index >= inventory.length) return false;
+    const storedLevel = inventory[index];
+    setInventory((inv) => {
+      const newInv = [...inv];
+      if (level > 0) {
+        // 현재 아이템과 교체
+        newInv[index] = level;
+      } else {
+        // 현재 아이템이 없으면 그냥 꺼내기
+        newInv.splice(index, 1);
+      }
+      return newInv;
+    });
+    setLevel(storedLevel);
+    return true;
+  }, [level, isEnhancing, isDestroyed, inventory]);
+
   return {
     level, gold, isEnhancing, result, isDestroyed, stats, lastSellPrice, isNewRecord,
-    successRate, downgradeRate, destroyRate, enhanceCost,
+    successRate, downgradeRate, destroyRate, enhanceCost, inventory,
     canEnhance, enhance, sell, reset, addGold, setResult,
-    setGold, setStats
+    setGold, setStats, setLevel, setInventory, storeItem, takeItem
   };
 };

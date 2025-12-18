@@ -15,12 +15,14 @@ button:active { transform: translateY(0); }
 
 /* 게임 컨테이너 */
 .game-container {
-  min-height: 100vh;
+  height: 100vh;
+  max-height: 100vh;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: space-between;
-  padding: 70px 20px 20px;
+  padding: 70px 20px 15px;
 }
 
 /* 아이템 관련 기본 스타일 - 크게! */
@@ -131,9 +133,18 @@ button:active { transform: translateY(0); }
     padding: 8px !important;
   }
 
-  .enhance-btn, .sell-btn {
-    padding: 10px 20px !important;
-    font-size: 13px !important;
+  .enhance-btn, .sell-btn, .store-btn {
+    padding: 8px 14px !important;
+    font-size: 12px !important;
+  }
+
+  .button-row {
+    gap: 8px !important;
+  }
+
+  .inventory-area {
+    margin-top: 8px !important;
+    padding: 6px 12px !important;
   }
 
   .stats-panel {
@@ -192,9 +203,14 @@ button:active { transform: translateY(0); }
     gap: 8px !important;
   }
 
-  .enhance-btn, .sell-btn {
-    padding: 10px 16px !important;
-    font-size: 12px !important;
+  .enhance-btn, .sell-btn, .store-btn {
+    padding: 8px 12px !important;
+    font-size: 11px !important;
+  }
+
+  .inventory-area {
+    margin-top: 5px !important;
+    padding: 5px 10px !important;
   }
 }
 
@@ -233,5 +249,65 @@ button:active { transform: translateY(0); }
 @media (max-width: 768px) {
   .mobile-stats-btn {
     display: flex !important;
+  }
+}
+
+/* 아이템 위치 조정 - 겹침 방지 */
+.item-display-wrapper .item-container {
+  top: 42% !important;
+}
+
+@media (max-width: 768px) {
+  .item-display-wrapper .item-container {
+    top: 38% !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .item-display-wrapper .item-container {
+    top: 35% !important;
+  }
+}
+
+@media (max-width: 360px) {
+  .item-display-wrapper .item-container {
+    top: 32% !important;
+  }
+}
+
+/* 세로가 짧은 화면 */
+@media (max-height: 700px) {
+  .item-display-wrapper .item-container {
+    top: 30% !important;
+  }
+
+  .item-box {
+    width: 220px !important;
+    height: 220px !important;
+  }
+
+  .item-image {
+    width: 180px !important;
+    height: 180px !important;
+  }
+
+  .item-level {
+    font-size: 22px !important;
+  }
+}
+
+@media (max-height: 600px) {
+  .item-display-wrapper .item-container {
+    top: 28% !important;
+  }
+
+  .item-box {
+    width: 180px !important;
+    height: 180px !important;
+  }
+
+  .item-image {
+    width: 150px !important;
+    height: 150px !important;
   }
 }
