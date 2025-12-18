@@ -18,19 +18,36 @@ export const AuthProvider = ({ children }) => {
       console.log('Kakao SDK 초기화 완료');
     }
 
-    // URL에서 access_token 확인 (카카오 로그인 후 리다이렉트)
-    const hash = window.location.hash;
-    if (hash && hash.includes('access_token')) {
-      const tokenPart = hash.split('access_token=')[1];
-      if (tokenPart) {
-        const accessToken = tokenPart.split('&')[0];
-        if (accessToken) {
-          window.Kakao.Auth.setAccessToken(accessToken);
-          fetchKakaoUser();
-          window.history.replaceState(null, '', window.location.pathname);
-          return;
-        }
-      }
+    // URL에서 code 확인 (카카오 로그인 후 리다이렉트)
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get('code');
+    if (code) {
+      // code로 access token 받기
+      fetch('https://kauth.kakao.com/oauth/token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          grant_type: 'authorization_code',
+          client_id: import.meta.env.VITE_KAKAO_JS_KEY,
+          redirect_uri: window.location.origin + window.location.pathname,
+          code: code,
+        }),
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.access_token) {
+            window.Kakao.Auth.setAccessToken(data.access_token);
+            fetchKakaoUser();
+            window.history.replaceState(null, '', window.location.pathname);
+          }
+        })
+        .catch((err) => {
+          console.error('토큰 교환 실패:', err);
+          setLoading(false);
+        });
+      return;
     }
 
     // 저장된 사용자 복원
