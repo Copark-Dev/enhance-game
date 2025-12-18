@@ -12,7 +12,7 @@ const ItemDisplay = ({ level, isEnhancing, result, isDestroyed }) => {
   const displayImage = levelImages[level];
 
   return (
-    <div style={{ position: 'relative', width: 260, height: 260 }}>
+    <div style={{ position: 'relative', width: 260, height: 260, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       
       {/* ========== 0-5강: 기본 펄스 (1초) ========== */}
       {isEnhancing && level < 6 && (
@@ -322,8 +322,8 @@ const ItemDisplay = ({ level, isEnhancing, result, isDestroyed }) => {
           rotate: { duration: 0.5 },
         }}
         style={{
-          position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
-          width: 180, height: 180, borderRadius: 20,
+          position: 'relative',
+          width: 180, height: 180, borderRadius: 20, pointerEvents: 'auto',
           background: isDestroyed ? 'linear-gradient(145deg, #1a1a1a, #0a0a0a)' : 'linear-gradient(145deg, #1a1a3a, #0a0a2a)',
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
           border: '3px solid ' + (isDestroyed ? '#333' : color),
