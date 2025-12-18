@@ -334,10 +334,10 @@ const ItemDisplay = ({ level, isEnhancing, result, isDestroyed, itemImage }) => 
           zIndex: 10,
         }}
       >
-        {!isDestroyed && (
+        {!isDestroyed && isEnhancing && (
           <motion.div
-            animate={{ rotate: isEnhancing ? 360 : 0 }}
-            transition={{ duration: isEnhancing ? (level >= 15 ? 1 : 2) : 15, repeat: Infinity, ease: 'linear' }}
+            animate={{ rotate: 360 }}
+            transition={{ duration: level >= 15 ? 1 : 2, repeat: Infinity, ease: 'linear' }}
             style={{
               position: 'absolute', width: 250, height: 250,
               background: 'conic-gradient(from 0deg, transparent 0%, ' + color + '33 25%, transparent 50%, ' + color + '33 75%, transparent 100%)',
@@ -419,16 +419,14 @@ const ItemDisplay = ({ level, isEnhancing, result, isDestroyed, itemImage }) => 
       </motion.div>
 
       {!isDestroyed && !isEnhancing && level >= 15 && (
-        <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
+        <div
           style={{
             position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
             width: 220, height: 220, borderRadius: '50%',
-            background: level >= 19 
-              ? 'conic-gradient(from 0deg, #ff000055, #ff880055, #ffff0055, #00ff0055, #00ffff55, #0088ff55, #ff00ff55, #ff000055)'
-              : 'conic-gradient(from 0deg, ' + color + '44, transparent, ' + color + '44, transparent)',
-            filter: 'blur(10px)',
+            background: level >= 19
+              ? 'conic-gradient(from 0deg, #ff000033, #ff880033, #ffff0033, #00ff0033, #00ffff33, #0088ff33, #ff00ff33, #ff000033)'
+              : 'conic-gradient(from 0deg, ' + color + '22, transparent, ' + color + '22, transparent)',
+            filter: 'blur(15px)',
           }}
         />
       )}
