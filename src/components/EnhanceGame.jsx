@@ -122,9 +122,11 @@ const EnhanceGame = () => {
         </div>
       </div>
 
+      {/* 파티클 이펙트 - 별도 레이어 */}
+      <ParticleEffect trigger={result} type={result || 'success'} level={level} />
+
       {/* 아이템 영역 - 화면 정중앙 고정 */}
       <div style={styles.centerItem} className="item-display-wrapper">
-        <ParticleEffect trigger={result} type={result || 'success'} level={level} />
         <ItemDisplay level={level} isEnhancing={isEnhancing} result={result} isDestroyed={isDestroyed} />
       </div>
 
@@ -178,7 +180,7 @@ const EnhanceGame = () => {
 
 const styles = {
   container: { minHeight: '100vh', background: 'linear-gradient(180deg, #0a0a1a 0%, #151530 50%, #0a0a1a 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between', paddingTop: 70, paddingBottom: 20, paddingLeft: 20, paddingRight: 20, fontFamily: 'Noto Sans KR, sans-serif', position: 'relative', overflow: 'hidden' },
-  centerItem: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1, pointerEvents: 'none' },
+  centerItem: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1, pointerEvents: 'none' },
   topUI: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, zIndex: 2 },
   bottomUI: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, zIndex: 2 },
   bgGlow: { position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: 500, height: 500, background: 'radial-gradient(circle, rgba(80,80,150,0.2) 0%, transparent 70%)', pointerEvents: 'none' },

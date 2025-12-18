@@ -12,7 +12,17 @@ const ItemDisplay = ({ level, isEnhancing, result, isDestroyed }) => {
   const displayImage = levelImages[level];
 
   return (
-    <div style={{ position: 'relative', width: 260, height: 260, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <div style={{
+      position: 'absolute',
+      top: '50%',
+      left: '50%',
+      transform: 'translate(-50%, -50%)',
+      width: 260,
+      height: 260,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center'
+    }}>
       
       {/* ========== 0-5강: 기본 펄스 (1초) ========== */}
       {isEnhancing && level < 6 && (
