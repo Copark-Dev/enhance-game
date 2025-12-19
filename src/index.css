@@ -34,130 +34,132 @@ button:active { transform: translateY(0); }
   flex-direction: column;
   align-items: center;
   justify-content: space-between;
-  padding: 70px 20px 15px;
+  padding: 60px 15px 12px;
   touch-action: manipulation;
 }
 
-/* 아이템 관련 기본 스타일 */
+/* 아이템 관련 기본 스타일 - 이미지 중심으로 변경 */
 .item-container {
-  width: 320px;
-  height: 320px;
+  width: 100%;
+  height: auto;
 }
 
 .item-box {
-  width: 280px;
-  height: 280px;
-  padding: 10px;
+  width: auto;
+  height: auto;
+  padding: 15px;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
 }
 
 .item-image {
-  width: 230px;
-  height: 230px;
+  width: 55vw;
+  height: 55vw;
+  max-width: 320px;
+  max-height: 320px;
+  border-radius: 20px !important;
+  background: transparent !important;
+  border: none !important;
 }
 
 .item-emoji {
-  font-size: 100px;
+  font-size: 120px;
 }
 
 .item-level {
-  font-size: 32px;
-  margin-top: 5px;
+  font-size: 36px;
+  margin-top: 8px;
 }
 
 /* 모바일 반응형 */
 @media (max-width: 768px) {
   .game-container {
-    padding: 55px 10px 10px;
+    padding: 50px 8px 8px;
   }
 
   .top-bar {
-    padding: 8px 10px !important;
+    padding: 6px 10px !important;
   }
 
   .top-bar .user-info {
-    gap: 5px !important;
+    gap: 4px !important;
   }
 
   .top-bar button {
-    padding: 4px 8px !important;
-    font-size: 10px !important;
+    padding: 3px 6px !important;
+    font-size: 9px !important;
   }
 
   .top-bar .profile-img {
-    width: 24px !important;
-    height: 24px !important;
+    width: 22px !important;
+    height: 22px !important;
   }
 
   .top-bar .user-name {
-    font-size: 11px !important;
-    max-width: 60px;
+    font-size: 10px !important;
+    max-width: 55px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
   .game-title {
-    font-size: 1.1rem !important;
+    font-size: 1rem !important;
+    margin-bottom: 2px !important;
   }
 
   .gold-area {
-    gap: 5px !important;
-    margin-bottom: 10px !important;
+    gap: 4px !important;
+    margin-bottom: 6px !important;
   }
 
   .gold-amount {
-    font-size: 18px !important;
+    font-size: 16px !important;
+    min-width: auto !important;
   }
 
-  /* 아이템 크기 조정 - 태블릿 */
-  .item-container {
-    width: 280px;
-    height: 280px;
-  }
-
-  .item-box {
-    width: 240px;
-    height: 240px;
-    padding: 8px;
-  }
-
+  /* 이미지 크게 */
   .item-image {
-    width: 200px;
-    height: 200px;
+    width: 60vw;
+    height: 60vw;
+    max-width: 280px;
+    max-height: 280px;
   }
 
   .item-emoji {
-    font-size: 85px;
+    font-size: 100px;
   }
 
   .item-level {
-    font-size: 26px;
-    margin-top: 4px;
+    font-size: 30px;
+    margin-top: 6px;
   }
 
   .price-info {
-    padding: 8px 12px !important;
-    font-size: 11px !important;
-    margin-bottom: 8px !important;
+    padding: 6px 10px !important;
+    font-size: 10px !important;
+    margin-bottom: 5px !important;
+    gap: 3px !important;
   }
 
   .rate-display {
-    font-size: 11px !important;
-    padding: 8px !important;
+    font-size: 10px !important;
+    padding: 5px !important;
   }
 
   .enhance-btn, .sell-btn, .store-btn {
-    padding: 8px 14px !important;
-    font-size: 12px !important;
+    padding: 7px 12px !important;
+    font-size: 11px !important;
   }
 
   .button-row {
-    gap: 8px !important;
+    gap: 6px !important;
   }
 
   .inventory-area {
-    margin-top: 8px !important;
-    padding: 6px 12px !important;
+    margin-top: 5px !important;
+    padding: 4px 8px !important;
   }
 
   .stats-panel {
@@ -167,34 +169,23 @@ button:active { transform: translateY(0); }
 
 @media (max-width: 480px) {
   .game-container {
-    padding: 50px 8px 8px;
+    padding: 48px 6px 6px;
   }
 
   .game-title {
-    font-size: 0.95rem !important;
+    font-size: 0.9rem !important;
   }
 
   .gold-amount {
-    font-size: 16px !important;
+    font-size: 14px !important;
   }
 
-  /* 아이템 크기 조정 - 모바일 (크게) */
-  .item-container {
-    width: 280px;
-    height: 280px;
-  }
-
-  .item-box {
-    width: 250px;
-    height: 250px;
-    padding: 8px;
-    border-radius: 22px !important;
-  }
-
+  /* 이미지 더 크게 */
   .item-image {
-    width: 210px;
-    height: 210px;
-    border-radius: 12px !important;
+    width: 65vw;
+    height: 65vw;
+    max-width: 260px;
+    max-height: 260px;
   }
 
   .item-emoji {
@@ -203,46 +194,43 @@ button:active { transform: translateY(0); }
 
   .item-level {
     font-size: 26px;
-    margin-top: 4px;
+    margin-top: 5px;
   }
 
   .price-info {
-    font-size: 10px !important;
-    gap: 4px !important;
+    font-size: 9px !important;
+    gap: 2px !important;
+    padding: 5px 8px !important;
   }
 
   .button-row {
     flex-direction: row;
-    gap: 8px !important;
+    gap: 5px !important;
   }
 
   .enhance-btn, .sell-btn, .store-btn {
-    padding: 8px 12px !important;
-    font-size: 11px !important;
+    padding: 6px 10px !important;
+    font-size: 10px !important;
   }
 
   .inventory-area {
-    margin-top: 5px !important;
-    padding: 5px 10px !important;
+    margin-top: 4px !important;
+    padding: 3px 6px !important;
+  }
+
+  .inventory-slot {
+    width: 38px !important;
+    height: 38px !important;
   }
 }
 
 /* 아주 작은 화면 */
 @media (max-width: 360px) {
-  .item-container {
-    width: 240px;
-    height: 240px;
-  }
-
-  .item-box {
-    width: 210px;
-    height: 210px;
-    padding: 6px;
-  }
-
   .item-image {
-    width: 175px;
-    height: 175px;
+    width: 60vw;
+    height: 60vw;
+    max-width: 220px;
+    max-height: 220px;
   }
 
   .item-emoji {
@@ -251,6 +239,11 @@ button:active { transform: translateY(0); }
 
   .item-level {
     font-size: 22px;
+  }
+
+  .enhance-btn, .sell-btn, .store-btn {
+    padding: 5px 8px !important;
+    font-size: 9px !important;
   }
 }
 
@@ -265,68 +258,67 @@ button:active { transform: translateY(0); }
   }
 }
 
-/* 아이템 위치 조정 - 겹침 방지 */
+/* 아이템 위치 조정 */
 .item-display-wrapper .item-container {
-  top: 38% !important;
+  top: 40% !important;
 }
 
 @media (max-width: 1024px) {
   .item-display-wrapper .item-container {
-    top: 36% !important;
+    top: 38% !important;
   }
 }
 
 @media (max-width: 768px) {
   .item-display-wrapper .item-container {
-    top: 34% !important;
+    top: 36% !important;
   }
 }
 
 @media (max-width: 480px) {
   .item-display-wrapper .item-container {
-    top: 32% !important;
+    top: 34% !important;
   }
 }
 
 @media (max-width: 360px) {
   .item-display-wrapper .item-container {
-    top: 30% !important;
+    top: 32% !important;
   }
 }
 
 /* 세로가 짧은 화면 */
 @media (max-height: 700px) {
   .item-display-wrapper .item-container {
-    top: 30% !important;
-  }
-
-  .item-box {
-    width: 220px !important;
-    height: 220px !important;
+    top: 32% !important;
   }
 
   .item-image {
-    width: 180px !important;
-    height: 180px !important;
+    width: 50vw !important;
+    height: 50vw !important;
+    max-width: 200px !important;
+    max-height: 200px !important;
   }
 
   .item-level {
     font-size: 22px !important;
   }
+
+  .price-info {
+    padding: 4px 6px !important;
+    font-size: 9px !important;
+  }
 }
 
 @media (max-height: 600px) {
   .item-display-wrapper .item-container {
-    top: 28% !important;
-  }
-
-  .item-box {
-    width: 180px !important;
-    height: 180px !important;
+    top: 30% !important;
   }
 
   .item-image {
-    width: 150px !important;
-    height: 150px !important;
+    width: 45vw !important;
+    height: 45vw !important;
+    max-width: 180px !important;
+    max-height: 180px !important;
   }
 }

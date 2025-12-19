@@ -6,7 +6,6 @@ const ItemDisplay = ({ level, isEnhancing, result, isDestroyed }) => {
   const color = getLevelColor(level);
   const tier = getLevelTier(level);
   const [imageError, setImageError] = useState(false);
-  const [showModal, setShowModal] = useState(false);
   const itemImage = getItemImage(level);
 
   useEffect(() => {
@@ -194,7 +193,7 @@ const ItemDisplay = ({ level, isEnhancing, result, isDestroyed }) => {
         </>
       )}
 
-      {/* 메인 아이템 박스 */}
+      {/* 메인 아이템 영역 - 박스 없이 이미지 중심 */}
       <motion.div
         animate={{
           scale: isEnhancing
@@ -225,22 +224,11 @@ const ItemDisplay = ({ level, isEnhancing, result, isDestroyed }) => {
         className="item-box"
         style={{
           position: 'relative',
-          borderRadius: 28,
           pointerEvents: 'auto',
-          background: isDestroyed
-            ? 'linear-gradient(145deg, #1a1a1a, #0a0a0a)'
-            : 'linear-gradient(145deg, #1a1a3a, #0a0a2a)',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          border: `3px solid ${isDestroyed ? '#333' : color}`,
-          boxShadow: isDestroyed
-            ? 'none'
-            : isEnhancing
-              ? `0 0 40px ${color}, 0 0 80px ${color}66`
-              : `0 0 20px ${color}`,
-          overflow: 'hidden',
           zIndex: 10,
         }}
       >
@@ -271,29 +259,7 @@ const ItemDisplay = ({ level, isEnhancing, result, isDestroyed }) => {
           />
         )}
 
-        {/* 티어 뱃지 */}
-        <motion.div
-          key={tier}
-          initial={{ scale: 0, rotate: -180 }}
-          animate={{ scale: 1, rotate: 0 }}
-          transition={{ type: 'spring', damping: 10 }}
-          style={{
-            position: 'absolute',
-            top: 10,
-            right: 10,
-            padding: '5px 12px',
-            borderRadius: 8,
-            backgroundColor: isDestroyed ? '#333' : color,
-            color: level >= 15 ? '#FFF' : '#000',
-            fontSize: 13,
-            fontWeight: 'bold',
-            zIndex: 20,
-          }}
-        >
-          {isDestroyed ? '파괴' : tier}
-        </motion.div>
-
-        {/* 아이템 이미지 */}
+        {/* 아이템 이미지 - 큰 사이즈로 화면 채우기 */}
         <motion.div
           key={level + '-img'}
           initial={{ scale: 0.5, opacity: 0 }}
@@ -304,28 +270,53 @@ const ItemDisplay = ({ level, isEnhancing, result, isDestroyed }) => {
           }}
           transition={{ duration: 0.3 }}
           className="item-image"
-          onClick={() => !isDestroyed && setShowModal(true)}
           style={{
-            borderRadius: 16,
-            backgroundColor: 'rgba(0,0,0,0.2)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             zIndex: 15,
-            overflow: 'hidden',
-            border: `2px solid ${isDestroyed ? '#222' : color}44`,
-            cursor: isDestroyed ? 'default' : 'pointer',
+            overflow: 'visible',
+            position: 'relative',
           }}
         >
           {!imageError && !isDestroyed ? (
             <img
               src={itemImage}
               alt='item'
-              style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'contain',
+                filter: `drop-shadow(0 0 20px ${color}80)`,
+              }}
               onError={() => setImageError(true)}
             />
           ) : (
             <span className="item-emoji">{isDestroyed ? '💔' : '⚔️'}</span>
+          )}
+          {/* 티어 뱃지 - 이미지 위에 오버레이 */}
+          {!isDestroyed && (
+            <motion.div
+              key={tier}
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ type: 'spring', damping: 12 }}
+              style={{
+                position: 'absolute',
+                top: -5,
+                right: -5,
+                padding: '4px 10px',
+                borderRadius: 12,
+                background: `linear-gradient(135deg, ${color}, ${color}cc)`,
+                color: level >= 15 ? '#FFF' : '#000',
+                fontSize: 11,
+                fontWeight: 'bold',
+                zIndex: 25,
+                boxShadow: `0 2px 10px ${color}80`,
+              }}
+            >
+              {tier}
+            </motion.div>
           )}
         </motion.div>
 
@@ -453,87 +444,6 @@ const ItemDisplay = ({ level, isEnhancing, result, isDestroyed }) => {
         </>
       )}
 
-      {/* 이미지 확대 모달 */}
-      <AnimatePresence>
-        {showModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setShowModal(false)}
-            style={{
-              position: 'fixed',
-              inset: 0,
-              backgroundColor: 'rgba(0,0,0,0.95)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              zIndex: 99999,
-              cursor: 'pointer',
-              pointerEvents: 'auto',
-            }}
-          >
-            <motion.div
-              initial={{ scale: 0.5, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.5, opacity: 0 }}
-              onClick={(e) => e.stopPropagation()}
-              style={{
-                position: 'relative',
-                padding: 24,
-                background: `linear-gradient(145deg, #1a1a3a, #0a0a2a)`,
-                borderRadius: 28,
-                border: `4px solid ${color}`,
-                boxShadow: `0 0 80px ${color}`,
-              }}
-            >
-              <img
-                src={itemImage}
-                alt='item'
-                style={{
-                  width: '80vmin',
-                  height: '80vmin',
-                  maxWidth: 600,
-                  maxHeight: 600,
-                  objectFit: 'contain',
-                  borderRadius: 20,
-                }}
-              />
-              <div style={{
-                textAlign: 'center',
-                marginTop: 20,
-                color: color,
-                fontSize: 36,
-                fontWeight: 'bold',
-                textShadow: `0 0 30px ${color}`,
-              }}>
-                +{level} {tier}
-              </div>
-              <button
-                onClick={() => setShowModal(false)}
-                style={{
-                  position: 'absolute',
-                  top: -18,
-                  right: -18,
-                  width: 48,
-                  height: 48,
-                  borderRadius: '50%',
-                  backgroundColor: '#222',
-                  color: '#fff',
-                  border: '3px solid #666',
-                  fontSize: 24,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                ✕
-              </button>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 };

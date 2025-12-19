@@ -385,7 +385,7 @@ const EnhanceGame = () => {
       <AchievementPanel
         isOpen={showAchievement}
         onClose={() => setShowAchievement(false)}
-        stats={stats}
+        stats={{ ...stats, battles: user?.battleStats?.battles || 0, wins: user?.battleStats?.wins || 0 }}
         claimedAchievements={user?.claimedAchievements || []}
         onClaimAchievement={(id, reward) => {
           claimAchievement(id, reward);

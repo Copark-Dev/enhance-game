@@ -54,6 +54,9 @@ service cloud.firestore {
     match /levelImages/{imageId} {
       allow read, write: if true;
     }
+    match /enhanceLogs/{logId} {
+      allow read, write: if true;
+    }
   }
 }
 ```

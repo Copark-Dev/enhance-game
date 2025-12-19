@@ -223,7 +223,7 @@ export const useEnhance = (initialLevel = 0, initialGold = 50000) => {
         playFail();
       } else if (shouldDestroy) {
         setIsDestroyed(true);
-        setStats((s) => ({ ...s, attempts: s.attempts + 1, failures: s.failures + 1 }));
+        setStats((s) => ({ ...s, attempts: s.attempts + 1, failures: s.failures + 1, destroys: (s.destroys || 0) + 1 }));
         setResult('destroyed');
         playDestroyed();
 

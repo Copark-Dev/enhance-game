@@ -26,8 +26,9 @@ const BattlePanel = ({
       // 히스토리 로드
       const history = JSON.parse(localStorage.getItem('battleHistory') || '[]');
       setBattleHistory(history.slice(0, 20));
-      // 현재 아이템이 있으면 자동 선택
-      if (currentItem && currentItem.level > 0) {
+      // 현재 아이템이 있고, 아직 선택된 아이템이 없을 때만 자동 선택
+      // (재매칭 시 이전 선택 유지)
+      if (!selectedItem && currentItem && currentItem.level > 0) {
         setSelectedItem({
           id: 'current',
           level: currentItem.level,
@@ -36,7 +37,7 @@ const BattlePanel = ({
         });
       }
     }
-  }, [isOpen, currentItem]);
+  }, [isOpen]);
 
   const loadHistory = () => {
     const history = JSON.parse(localStorage.getItem('battleHistory') || '[]');
@@ -62,10 +63,10 @@ const BattlePanel = ({
     return Math.floor(attack + (hp / 2) + (level * 10));
   };
 
-  // 아이템 스탯 기반 HP 계산
+  // 아이템 스탯 기반 HP 계산 (5배 증가로 배틀 길이 증가)
   const calculateMaxHp = (item) => {
-    const baseHp = 100;
-    const itemHp = item?.hp || 0;
+    const baseHp = 500;
+    const itemHp = (item?.hp || 0) * 5;
     return baseHp + itemHp;
   };
 
@@ -377,9 +378,9 @@ const BattlePanel = ({
                     </div>
                     <div style={styles.vs}>VS</div>
                     <div style={styles.fighter}>
-                      <div style={styles.opponentIcon}>👤</div>
+                      <img src={getItemImage(matchedOpponent?.battleItem?.level || 0)} alt="" style={styles.fighterImg} />
                       <div style={{ color: getLevelColor(matchedOpponent?.battleItem?.level || 0) }}>
-                        +{matchedOpponent?.battleItem?.level || 0}
+                        +{matchedOpponent?.battleItem?.level} {getLevelTier(matchedOpponent?.battleItem?.level)}
                       </div>
                       <div style={styles.itemStatsSmall}>
                         ⚔️{matchedOpponent?.battleItem?.attack} ❤️{matchedOpponent?.battleItem?.hp}
