@@ -311,9 +311,9 @@ export const useEnhance = (initialLevel = 0, initialGold = 50000) => {
     // Rate limit 체크 (너무 빠른 클릭 방지)
     if (!grindLimiter()) return;
 
-    // 0.1% 확률로 잭팟
+    // 0.1% 확률로 잭팟 (10만G)
     if (secureRandom01() < 0.001) {
-      setGold((g) => g + 10000);
+      setGold((g) => g + 100000);
       triggerEvent('jackpot');
     } else {
       setGold((g) => g + amount);
