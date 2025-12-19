@@ -304,12 +304,62 @@ export const AuthProvider = ({ children }) => {
         const friendData = friendSnap.data();
         const friendNewGold = (friendData.gold || 0) + amount;
         await updateDoc(friendRef, { gold: friendNewGold });
+
+        // 선물 알림 저장
+        const notificationRef = doc(collection(db, 'giftNotifications'));
+        await setDoc(notificationRef, {
+          recipientId: friendId,
+          senderId: user.id,
+          senderNickname: user.nickname,
+          senderProfileImage: user.profileImage,
+          amount: amount,
+          timestamp: new Date().toISOString(),
+          read: false
+        });
+
         return { success: true, message: `${amount}G를 선물했습니다!` };
       }
       return { success: false, message: '친구를 찾을 수 없습니다' };
     } catch (err) {
       console.error('선물 실패:', err);
       return { success: false, message: '선물 실패' };
+    }
+  };
+
+  // 선물 알림 가져오기
+  const getGiftNotifications = async () => {
+    if (!user) return [];
+    try {
+      const q = query(
+        collection(db, 'giftNotifications'),
+        where('recipientId', '==', user.id),
+        where('read', '==', false),
+        orderBy('timestamp', 'desc'),
+        limit(10)
+      );
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    } catch (err) {
+      console.error('선물 알림 로드 실패:', err);
+      return [];
+    }
+  };
+
+  // 선물 알림 읽음 처리
+  const markGiftNotificationsRead = async () => {
+    if (!user) return;
+    try {
+      const q = query(
+        collection(db, 'giftNotifications'),
+        where('recipientId', '==', user.id),
+        where('read', '==', false)
+      );
+      const snapshot = await getDocs(q);
+      for (const docSnap of snapshot.docs) {
+        await updateDoc(doc(db, 'giftNotifications', docSnap.id), { read: true });
+      }
+    } catch (err) {
+      console.error('알림 읽음 처리 실패:', err);
     }
   };
 
@@ -619,6 +669,7 @@ export const AuthProvider = ({ children }) => {
     <AuthContext.Provider value={{
       user, loading, loginWithKakao, logout, updateUserData,
       searchUserByNickname, addFriend, removeFriend, getFriendsList, sendGold,
+      getGiftNotifications, markGiftNotificationsRead,
       getRankings, claimDailyReward, claimAchievement, updateBattleStats,
       getRandomOpponents, saveBattleNotification, getBattleNotifications, markBattleNotificationsRead,
       saveFCMToken, notifyFriendsHighEnhance, saveEnhanceLog

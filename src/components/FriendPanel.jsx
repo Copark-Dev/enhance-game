@@ -13,6 +13,7 @@ const FriendPanel = ({ isOpen, onClose, onGoldChange }) => {
   const [message, setMessage] = useState({ text: '', type: 'success' });
   const [giftAmount, setGiftAmount] = useState('');
   const [giftingTo, setGiftingTo] = useState(null);
+  const [expandedFriend, setExpandedFriend] = useState(null);
 
   const loadFriends = async () => {
     setLoading(true);
@@ -179,43 +180,81 @@ const FriendPanel = ({ isOpen, onClose, onGoldChange }) => {
               <div style={styles.empty}>친구가 없습니다. 닉네임으로 검색해 추가하세요!</div>
             ) : (
               friends.map((friend) => (
-                <div key={friend.id} style={styles.friendCard}>
-                  <div style={styles.userInfo}>
-                    <div style={styles.avatarWrapper}>
-                      {friend.profileImage ? (
-                        <img src={friend.profileImage} alt="" style={styles.avatar} />
+                <div key={friend.id}>
+                  <div style={styles.friendCard} onClick={() => setExpandedFriend(expandedFriend === friend.id ? null : friend.id)}>
+                    <div style={styles.userInfo}>
+                      <div style={styles.avatarWrapper}>
+                        {friend.profileImage ? (
+                          <img src={friend.profileImage} alt="" style={styles.avatar} />
+                        ) : (
+                          <div style={styles.defaultAvatar}>👤</div>
+                        )}
+                      </div>
+                      <div>
+                        <div style={styles.nickname}>{friend.nickname}</div>
+                        <div style={{ color: getLevelColor(friend.level || 0), fontSize: 12 }}>
+                          +{friend.level || 0} {getLevelTier(friend.level || 0)}
+                        </div>
+                        <div style={styles.goldInfo}>🪙 {formatGold(friend.gold || 0)}</div>
+                      </div>
+                    </div>
+                    <div style={styles.friendActions} onClick={(e) => e.stopPropagation()}>
+                      {giftingTo === friend.id ? (
+                        <div style={styles.giftInput}>
+                          <input
+                            type="number"
+                            value={giftAmount}
+                            onChange={(e) => setGiftAmount(e.target.value)}
+                            placeholder="금액"
+                            style={styles.amountInput}
+                          />
+                          <button onClick={() => handleSendGold(friend.id)} style={styles.sendBtn}>보내기</button>
+                          <button onClick={() => setGiftingTo(null)} style={styles.cancelBtn}>취소</button>
+                        </div>
                       ) : (
-                        <div style={styles.defaultAvatar}>👤</div>
+                        <>
+                          <button onClick={() => setGiftingTo(friend.id)} style={styles.giftBtn}>🎁</button>
+                          <button onClick={() => handleRemoveFriend(friend.id)} style={styles.removeBtn}>✕</button>
+                        </>
                       )}
                     </div>
-                    <div>
-                      <div style={styles.nickname}>{friend.nickname}</div>
-                      <div style={{ color: getLevelColor(friend.level || 0), fontSize: 12 }}>
-                        +{friend.level || 0} {getLevelTier(friend.level || 0)}
-                      </div>
-                      <div style={styles.goldInfo}>🪙 {formatGold(friend.gold || 0)}</div>
-                    </div>
                   </div>
-                  <div style={styles.friendActions}>
-                    {giftingTo === friend.id ? (
-                      <div style={styles.giftInput}>
-                        <input
-                          type="number"
-                          value={giftAmount}
-                          onChange={(e) => setGiftAmount(e.target.value)}
-                          placeholder="금액"
-                          style={styles.amountInput}
-                        />
-                        <button onClick={() => handleSendGold(friend.id)} style={styles.sendBtn}>보내기</button>
-                        <button onClick={() => setGiftingTo(null)} style={styles.cancelBtn}>취소</button>
+                  {/* 친구 상세 정보 (확장 시) */}
+                  {expandedFriend === friend.id && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      style={styles.friendDetail}
+                    >
+                      <div style={styles.detailSection}>
+                        <div style={styles.detailTitle}>📊 통계</div>
+                        <div style={styles.detailStats}>
+                          <span>시도: {friend.stats?.attempts || 0}</span>
+                          <span>성공: {friend.stats?.successes || 0}</span>
+                          <span>최고: +{friend.stats?.maxLevel || 0}</span>
+                        </div>
                       </div>
-                    ) : (
-                      <>
-                        <button onClick={() => setGiftingTo(friend.id)} style={styles.giftBtn}>🎁</button>
-                        <button onClick={() => handleRemoveFriend(friend.id)} style={styles.removeBtn}>✕</button>
-                      </>
-                    )}
-                  </div>
+                      {friend.inventory && friend.inventory.length > 0 && (
+                        <div style={styles.detailSection}>
+                          <div style={styles.detailTitle}>📦 보관함 ({friend.inventory.length}/5)</div>
+                          <div style={styles.inventoryList}>
+                            {friend.inventory.map((item, idx) => (
+                              <div key={idx} style={{
+                                ...styles.inventoryItem,
+                                borderColor: getLevelColor(item.level || item)
+                              }}>
+                                <span style={{ color: getLevelColor(item.level || item) }}>
+                                  +{item.level || item}
+                                </span>
+                                {item.attack && <span style={{fontSize: 9, color: '#aaa'}}>⚔️{item.attack}</span>}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </motion.div>
+                  )}
                 </div>
               ))
             )}
@@ -455,6 +494,45 @@ const styles = {
     color: '#fff',
     cursor: 'pointer',
     fontSize: 11,
+  },
+  friendDetail: {
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    borderRadius: '0 0 10px 10px',
+    padding: 12,
+    marginTop: -8,
+    marginBottom: 8,
+    overflow: 'hidden',
+  },
+  detailSection: {
+    marginBottom: 10,
+  },
+  detailTitle: {
+    color: '#FFD700',
+    fontSize: 11,
+    fontWeight: 'bold',
+    marginBottom: 6,
+  },
+  detailStats: {
+    display: 'flex',
+    gap: 12,
+    fontSize: 11,
+    color: '#aaa',
+  },
+  inventoryList: {
+    display: 'flex',
+    gap: 6,
+    flexWrap: 'wrap',
+  },
+  inventoryItem: {
+    padding: '4px 8px',
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 6,
+    border: '1px solid',
+    fontSize: 11,
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: 2,
   },
 };
 

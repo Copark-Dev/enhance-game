@@ -21,13 +21,15 @@ import BattleNotificationModal from './BattleNotificationModal';
 import BottomNavigation from './BottomNavigation';
 import InstallPromptModal, { shouldShowInstallPrompt } from './InstallPromptModal';
 import LiveFeed from './LiveFeed';
+import GiftNotificationModal from './GiftNotificationModal';
 
 const EnhanceGame = () => {
   const navigate = useNavigate();
   const {
     user, logout, updateUserData, getRankings, claimDailyReward, claimAchievement, updateBattleStats,
     getRandomOpponents, saveBattleNotification, getBattleNotifications, markBattleNotificationsRead,
-    saveFCMToken, notifyFriendsHighEnhance, saveEnhanceLog
+    saveFCMToken, notifyFriendsHighEnhance, saveEnhanceLog,
+    getGiftNotifications, markGiftNotificationsRead
   } = useAuth();
   const {
     level, gold, isEnhancing, result, isDestroyed, stats, lastSellPrice, isNewRecord,
@@ -48,6 +50,8 @@ const EnhanceGame = () => {
   const [battleNotifications, setBattleNotifications] = useState([]);
   const [showBattleNotifications, setShowBattleNotifications] = useState(false);
   const [showInstallPrompt, setShowInstallPrompt] = useState(false);
+  const [activeBuffTooltip, setActiveBuffTooltip] = useState(null);
+  const [giftNotifications, setGiftNotifications] = useState([]);
   const [showLiveFeed, setShowLiveFeed] = useState(false);
   const [previousLevel, setPreviousLevel] = useState(0);
   const sellRange = SELL_PRICE[level] || { min: 0, max: 0 };
@@ -80,6 +84,23 @@ const EnhanceGame = () => {
       }
     };
     checkBattleNotifications();
+  }, [user]);
+
+  // 접속 시 선물 알림 확인
+  useEffect(() => {
+    const checkGiftNotifications = async () => {
+      if (user && getGiftNotifications) {
+        try {
+          const notifications = await getGiftNotifications();
+          if (notifications.length > 0) {
+            setGiftNotifications(notifications);
+          }
+        } catch (err) {
+          console.error('선물 알림 로드 실패:', err);
+        }
+      }
+    };
+    checkGiftNotifications();
   }, [user]);
 
   // FCM 토큰 요청 (로그인 후)
@@ -260,13 +281,53 @@ const EnhanceGame = () => {
           </motion.button>
         </div>
 
-        {/* 활성 버프 표시 */}
+        {/* 활성 버프 표시 (클릭 시 툴팁) */}
         {(buffs.shield || buffs.freeEnhance || buffs.passion || buffs.blessing) && (
           <div style={styles.buffArea}>
-            {buffs.shield && <span style={styles.buffBadge}>🛡️</span>}
-            {buffs.freeEnhance && <span style={styles.buffBadge}>🎁</span>}
-            {buffs.passion && <span style={{...styles.buffBadge, background: 'linear-gradient(145deg, #FF6B6B, #FF4444)'}}>🔥 2x</span>}
-            {buffs.blessing && <span style={styles.buffBadge}>🌟</span>}
+            {buffs.shield && (
+              <span
+                style={styles.buffBadge}
+                onClick={() => setActiveBuffTooltip(activeBuffTooltip === 'shield' ? null : 'shield')}
+              >
+                🛡️
+                {activeBuffTooltip === 'shield' && (
+                  <div style={styles.buffTooltip}>파괴 방지: 다음 파괴 시 보호</div>
+                )}
+              </span>
+            )}
+            {buffs.freeEnhance && (
+              <span
+                style={styles.buffBadge}
+                onClick={() => setActiveBuffTooltip(activeBuffTooltip === 'free' ? null : 'free')}
+              >
+                🎁
+                {activeBuffTooltip === 'free' && (
+                  <div style={styles.buffTooltip}>무료 강화: 다음 강화 무료</div>
+                )}
+              </span>
+            )}
+            {buffs.passion && (
+              <span
+                style={{...styles.buffBadge, background: 'linear-gradient(145deg, #FF6B6B, #FF4444)'}}
+                onClick={() => setActiveBuffTooltip(activeBuffTooltip === 'passion' ? null : 'passion')}
+              >
+                🔥 2x
+                {activeBuffTooltip === 'passion' && (
+                  <div style={styles.buffTooltip}>열정 모드: 성공률 2배</div>
+                )}
+              </span>
+            )}
+            {buffs.blessing && (
+              <span
+                style={styles.buffBadge}
+                onClick={() => setActiveBuffTooltip(activeBuffTooltip === 'blessing' ? null : 'blessing')}
+              >
+                🌟
+                {activeBuffTooltip === 'blessing' && (
+                  <div style={styles.buffTooltip}>축복: 다음 하락 방지</div>
+                )}
+              </span>
+            )}
           </div>
         )}
       </div>
@@ -293,7 +354,7 @@ const EnhanceGame = () => {
           {level > 0 && (
             <div style={styles.statsRow}>
               <span style={styles.statLabel}>⚔️ {itemStats.attack}</span>
-              <span style={styles.statLabel}>❤️ {itemStats.hp}</span>
+              <span style={styles.statLabel}>❤️ {500 + itemStats.hp * 5}</span>
             </div>
           )}
         </div>
@@ -369,6 +430,7 @@ const EnhanceGame = () => {
         isMobileOpen={showMobileStats}
         onClose={() => setShowMobileStats(false)}
         onResetStats={() => setStats({ attempts: 0, successes: 0, failures: 0, maxLevel: 0, totalSpent: 0, totalEarned: 0 })}
+        user={user}
       />
       <ResultOverlay result={result} level={level} lastSellPrice={lastSellPrice} isNewRecord={isNewRecord} />
       <FriendPanel isOpen={showFriendPanel} onClose={() => setShowFriendPanel(false)} onGoldChange={setGold} />
@@ -436,6 +498,17 @@ const EnhanceGame = () => {
         isOpen={showInstallPrompt}
         onClose={() => setShowInstallPrompt(false)}
       />
+
+      {/* 선물 알림 모달 */}
+      {giftNotifications.length > 0 && (
+        <GiftNotificationModal
+          notifications={giftNotifications}
+          onClose={() => {
+            markGiftNotificationsRead();
+            setGiftNotifications([]);
+          }}
+        />
+      )}
 
       {/* 실시간 강화 피드 */}
       <LiveFeed
@@ -522,9 +595,9 @@ const styles = {
   statLabel: { color: '#FFD700', fontSize: 14, fontWeight: 'bold' },
   buttonArea: { marginTop: 15, zIndex: 1 },
   buttonRow: { display: 'flex', gap: 15 },
-  resetBtn: { padding: '16px 50px', fontSize: 18, fontWeight: 'bold', color: '#FFF', background: 'linear-gradient(145deg, #4CAF50, #388E3C)', border: 'none', borderRadius: 30, cursor: 'pointer' },
-  sellBtn: { padding: '16px 35px', fontSize: 18, fontWeight: 'bold', color: '#000', background: 'linear-gradient(145deg, #FFD700, #FFA000)', border: 'none', borderRadius: 30 },
-  storeBtn: { padding: '16px 25px', fontSize: 18, fontWeight: 'bold', color: '#fff', background: 'linear-gradient(145deg, #6B5B95, #4A4070)', border: 'none', borderRadius: 30 },
+  resetBtn: { padding: '10px 40px', fontSize: 15, fontWeight: 'bold', color: '#FFF', background: 'linear-gradient(145deg, #4CAF50, #388E3C)', border: 'none', borderRadius: 20, cursor: 'pointer' },
+  sellBtn: { padding: '10px 28px', fontSize: 15, fontWeight: 'bold', color: '#000', background: 'linear-gradient(145deg, #FFD700, #FFA000)', border: 'none', borderRadius: 20 },
+  storeBtn: { padding: '10px 20px', fontSize: 15, fontWeight: 'bold', color: '#fff', background: 'linear-gradient(145deg, #6B5B95, #4A4070)', border: 'none', borderRadius: 20 },
   warning: { marginTop: 15, padding: '10px 20px', backgroundColor: 'rgba(255,152,0,0.2)', color: '#FF9800', borderRadius: 10, fontSize: 14, zIndex: 1 },
   inventoryArea: { marginTop: 12, padding: '10px 16px', backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 12, zIndex: 1 },
   inventoryLabel: { color: '#888', fontSize: 12, marginBottom: 8, textAlign: 'center' },
@@ -549,6 +622,24 @@ const styles = {
     fontSize: 14,
     border: '1px solid #666',
     color: '#fff',
+    position: 'relative',
+    cursor: 'pointer',
+  },
+  buffTooltip: {
+    position: 'absolute',
+    top: '100%',
+    left: '50%',
+    transform: 'translateX(-50%)',
+    marginTop: 8,
+    padding: '8px 12px',
+    backgroundColor: 'rgba(0,0,0,0.95)',
+    borderRadius: 8,
+    fontSize: 11,
+    color: '#fff',
+    whiteSpace: 'nowrap',
+    border: '1px solid #FFD700',
+    zIndex: 100,
+    boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
   },
   eventNotification: {
     position: 'fixed',

@@ -23,7 +23,7 @@ const ItemDisplay = ({ level, isEnhancing, result, isDestroyed }) => {
       justifyContent: 'center'
     }}>
 
-      {/* 강화 중 글로우 이펙트 */}
+      {/* 강화 중 글로우 이펙트 - 이미지 앞에 표시 */}
       {isEnhancing && (
         <>
           {/* 외곽 펄스 링 - 레벨에 따라 속도와 크기 증가 */}
@@ -39,13 +39,15 @@ const ItemDisplay = ({ level, isEnhancing, result, isDestroyed }) => {
             }}
             style={{
               position: 'absolute',
-              width: level >= 15 ? 260 : level >= 10 ? 240 : 220,
-              height: level >= 15 ? 260 : level >= 10 ? 240 : 220,
+              width: level >= 15 ? 280 : level >= 10 ? 260 : 240,
+              height: level >= 15 ? 280 : level >= 10 ? 260 : 240,
               borderRadius: '50%',
               border: `${level >= 15 ? 5 : level >= 10 ? 4 : 3}px solid ${color}`,
               boxShadow: level >= 15
-                ? `0 0 50px ${color}, 0 0 100px ${color}`
-                : `0 0 30px ${color}`,
+                ? `0 0 60px ${color}, 0 0 120px ${color}`
+                : `0 0 40px ${color}`,
+              filter: 'blur(2px)',
+              zIndex: 20,
             }}
           />
 
@@ -53,7 +55,7 @@ const ItemDisplay = ({ level, isEnhancing, result, isDestroyed }) => {
           <motion.div
             animate={{
               opacity: level >= 15 ? [0.5, 1, 0.5] : [0.3, 0.7, 0.3],
-              scale: level >= 15 ? [0.9, 1.15, 0.9] : [0.95, 1.05, 0.95]
+              scale: level >= 15 ? [0.9, 1.2, 0.9] : [0.95, 1.1, 0.95]
             }}
             transition={{
               duration: level >= 15 ? 0.5 : 0.8,
@@ -62,12 +64,14 @@ const ItemDisplay = ({ level, isEnhancing, result, isDestroyed }) => {
             }}
             style={{
               position: 'absolute',
-              width: 200,
-              height: 200,
+              width: 220,
+              height: 220,
               borderRadius: '50%',
               background: level >= 15
-                ? `radial-gradient(circle, ${color}80 0%, ${color}40 40%, transparent 70%)`
-                : `radial-gradient(circle, ${color}40 0%, transparent 70%)`,
+                ? `radial-gradient(circle, ${color}90 0%, ${color}50 40%, transparent 70%)`
+                : `radial-gradient(circle, ${color}50 0%, transparent 70%)`,
+              filter: 'blur(15px)',
+              zIndex: 18,
             }}
           />
 
@@ -78,11 +82,13 @@ const ItemDisplay = ({ level, isEnhancing, result, isDestroyed }) => {
               transition={{ duration: level >= 15 ? 1.5 : 3, repeat: Infinity, ease: 'linear' }}
               style={{
                 position: 'absolute',
-                width: 280,
-                height: 280,
+                width: 300,
+                height: 300,
                 borderRadius: '50%',
                 border: `${level >= 15 ? 4 : 2}px dashed ${color}`,
-                boxShadow: level >= 15 ? `0 0 20px ${color}60` : 'none',
+                boxShadow: level >= 15 ? `0 0 30px ${color}80` : `0 0 15px ${color}40`,
+                filter: 'blur(1px)',
+                zIndex: 22,
               }}
             />
           )}
@@ -94,10 +100,12 @@ const ItemDisplay = ({ level, isEnhancing, result, isDestroyed }) => {
               transition={{ duration: level >= 15 ? 2 : 4, repeat: Infinity, ease: 'linear' }}
               style={{
                 position: 'absolute',
-                width: 300,
-                height: 300,
+                width: 320,
+                height: 320,
                 borderRadius: '50%',
-                border: `2px dotted ${color}40`,
+                border: `2px dotted ${color}60`,
+                filter: 'blur(1px)',
+                zIndex: 21,
               }}
             />
           )}
@@ -112,11 +120,12 @@ const ItemDisplay = ({ level, isEnhancing, result, isDestroyed }) => {
               }}
               style={{
                 position: 'absolute',
-                width: 340,
-                height: 340,
+                width: 360,
+                height: 360,
                 borderRadius: '50%',
-                background: `conic-gradient(from 0deg, transparent 0%, ${color}50 25%, transparent 50%, ${color}50 75%, transparent 100%)`,
-                filter: 'blur(15px)',
+                background: `conic-gradient(from 0deg, transparent 0%, ${color}60 25%, transparent 50%, ${color}60 75%, transparent 100%)`,
+                filter: 'blur(20px)',
+                zIndex: 23,
               }}
             />
           )}
@@ -129,8 +138,8 @@ const ItemDisplay = ({ level, isEnhancing, result, isDestroyed }) => {
                   key={`flame-${i}`}
                   animate={{
                     scale: [1, 1.5, 1],
-                    opacity: [0.8, 0.3, 0.8],
-                    y: [0, -20, 0]
+                    opacity: [0.9, 0.4, 0.9],
+                    y: [0, -25, 0]
                   }}
                   transition={{
                     duration: 0.6,
@@ -140,14 +149,15 @@ const ItemDisplay = ({ level, isEnhancing, result, isDestroyed }) => {
                   }}
                   style={{
                     position: 'absolute',
-                    width: 20,
-                    height: 40,
+                    width: 24,
+                    height: 50,
                     borderRadius: '50% 50% 50% 50%',
                     background: level >= 19
                       ? `linear-gradient(to top, #ff0080, #7928ca)`
                       : `linear-gradient(to top, ${color}, #ff4500)`,
-                    transform: `rotate(${angle}deg) translateY(-130px)`,
-                    filter: 'blur(3px)',
+                    transform: `rotate(${angle}deg) translateY(-140px)`,
+                    filter: 'blur(4px)',
+                    zIndex: 24,
                   }}
                 />
               ))}
@@ -157,19 +167,20 @@ const ItemDisplay = ({ level, isEnhancing, result, isDestroyed }) => {
           {/* 19강 이상 무지개 오라 */}
           {level >= 19 && (
             <motion.div
-              animate={{ rotate: 360, scale: [1, 1.1, 1] }}
+              animate={{ rotate: 360, scale: [1, 1.15, 1] }}
               transition={{
                 rotate: { duration: 3, repeat: Infinity, ease: 'linear' },
                 scale: { duration: 1, repeat: Infinity }
               }}
               style={{
                 position: 'absolute',
-                width: 380,
-                height: 380,
+                width: 400,
+                height: 400,
                 borderRadius: '50%',
                 background: 'conic-gradient(from 0deg, #ff0080, #7928ca, #0070f3, #00d4ff, #00ff88, #ffff00, #ff8800, #ff0080)',
-                opacity: 0.3,
-                filter: 'blur(25px)',
+                opacity: 0.4,
+                filter: 'blur(30px)',
+                zIndex: 25,
               }}
             />
           )}
@@ -177,16 +188,18 @@ const ItemDisplay = ({ level, isEnhancing, result, isDestroyed }) => {
           {/* 전기 이펙트 (10강 이상) */}
           {level >= 10 && (
             <motion.div
-              animate={{ opacity: [0, 1, 0], scale: [0.8, 1.2, 0.8] }}
-              transition={{ duration: 0.3, repeat: Infinity, repeatDelay: 0.5 }}
+              animate={{ opacity: [0, 1, 0], scale: [0.9, 1.3, 0.9] }}
+              transition={{ duration: 0.3, repeat: Infinity, repeatDelay: 0.4 }}
               style={{
                 position: 'absolute',
-                width: 250,
-                height: 250,
+                width: 270,
+                height: 270,
                 borderRadius: '50%',
-                border: `2px solid ${level >= 15 ? '#fff' : color}`,
-                boxShadow: `0 0 ${level >= 15 ? 40 : 20}px ${level >= 15 ? '#fff' : color}`,
-                opacity: 0.5,
+                border: `3px solid ${level >= 15 ? '#fff' : color}`,
+                boxShadow: `0 0 ${level >= 15 ? 50 : 25}px ${level >= 15 ? '#fff' : color}`,
+                opacity: 0.6,
+                filter: 'blur(2px)',
+                zIndex: 26,
               }}
             />
           )}
@@ -294,7 +307,32 @@ const ItemDisplay = ({ level, isEnhancing, result, isDestroyed }) => {
           ) : (
             <span className="item-emoji">{isDestroyed ? '💔' : '⚔️'}</span>
           )}
-          {/* 티어 뱃지 - 이미지 위에 오버레이 */}
+          {/* 레벨 뱃지 - 왼쪽 위 */}
+          {!isDestroyed && (
+            <motion.div
+              key={level}
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ type: 'spring', damping: 10 }}
+              style={{
+                position: 'absolute',
+                top: -8,
+                left: -8,
+                padding: '6px 14px',
+                borderRadius: 14,
+                background: `linear-gradient(135deg, ${color}, ${color}dd)`,
+                color: level >= 15 ? '#FFF' : '#000',
+                fontSize: 18,
+                fontWeight: 'bold',
+                zIndex: 30,
+                boxShadow: `0 4px 15px ${color}80, 0 0 20px ${color}50`,
+                textShadow: level >= 15 ? '0 0 10px rgba(255,255,255,0.5)' : 'none',
+              }}
+            >
+              +{level}
+            </motion.div>
+          )}
+          {/* 티어 뱃지 - 오른쪽 위 */}
           {!isDestroyed && (
             <motion.div
               key={tier}
@@ -320,22 +358,22 @@ const ItemDisplay = ({ level, isEnhancing, result, isDestroyed }) => {
           )}
         </motion.div>
 
-        {/* 레벨 텍스트 */}
-        <motion.div
-          key={level}
-          initial={{ scale: 2, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ type: 'spring', damping: 10 }}
-          className="item-level"
-          style={{
-            fontWeight: 'bold',
-            color: isDestroyed ? '#444' : color,
-            textShadow: isDestroyed ? 'none' : `0 0 15px ${color}, 0 0 30px ${color}`,
-            zIndex: 15,
-          }}
-        >
-          {isDestroyed ? '파괴됨' : `+${level}`}
-        </motion.div>
+        {/* 파괴됨 텍스트 */}
+        {isDestroyed && (
+          <motion.div
+            initial={{ scale: 2, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: 'spring', damping: 10 }}
+            className="item-level"
+            style={{
+              fontWeight: 'bold',
+              color: '#444',
+              zIndex: 15,
+            }}
+          >
+            파괴됨
+          </motion.div>
+        )}
 
         {/* MAX 레벨 표시 */}
         {level >= MAX_LEVEL && !isDestroyed && (
