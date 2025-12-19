@@ -167,7 +167,12 @@ const FriendPanel = ({ isOpen, onClose, onGoldChange }) => {
 
           {/* 친구 목록 */}
           <div style={styles.friendList}>
-            <h3 style={styles.sectionTitle}>내 친구 ({friends.length})</h3>
+            <div style={styles.sectionHeader}>
+              <h3 style={styles.sectionTitle}>내 친구 ({friends.length})</h3>
+              <button onClick={loadFriends} style={styles.refreshBtn} disabled={loading}>
+                {loading ? '⏳' : '🔄'}
+              </button>
+            </div>
             {loading ? (
               <div style={styles.loading}>로딩 중...</div>
             ) : friends.length === 0 ? (
@@ -355,10 +360,24 @@ const styles = {
     cursor: 'pointer',
     fontSize: 12,
   },
+  sectionHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
   sectionTitle: {
     color: '#888',
     fontSize: 14,
-    marginBottom: 12,
+    margin: 0,
+  },
+  refreshBtn: {
+    padding: '4px 10px',
+    borderRadius: 6,
+    border: 'none',
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    cursor: 'pointer',
+    fontSize: 14,
   },
   friendList: {
     maxHeight: 300,
