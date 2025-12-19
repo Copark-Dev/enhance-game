@@ -112,7 +112,7 @@ const BattlePanel = ({
     setIsMatching(false);
   };
 
-  // 배틀 시뮬레이션 (아이템 스탯 기반)
+  // 배틀 시뮬레이션 (아이템 스탯 기반 + 다양한 효과)
   const simulateBattle = async () => {
     if (!selectedItem || !matchedOpponent) return;
 
@@ -133,6 +133,10 @@ const BattlePanel = ({
 
     const logs = [];
     let round = 0;
+    let myPoison = 0; // 독 데미지
+    let opponentPoison = 0;
+    let myStunned = false; // 스턴 상태
+    let opponentStunned = false;
 
     // 암호학적 난수 생성
     const secureRandom = () => {
@@ -141,53 +145,136 @@ const BattlePanel = ({
       return array[0] / 4294967295;
     };
 
-    while (myHp > 0 && opponentHp > 0 && round < 20) {
-      round++;
+    // 공격 처리 함수
+    const processAttack = (attacker, attackerItem, defenderItem, defenderHp, attackPower) => {
+      const roll = secureRandom() * 100;
+      const dodgeChance = getDodgeChance(defenderItem);
+      const critChance = getCritChance(attackerItem.level);
 
-      // 내 턴
-      const opponentDodgeRoll = secureRandom() * 100;
-      const myCritRoll = secureRandom() * 100;
-      const opponentDodge = getDodgeChance(opponentItem);
-
-      if (opponentDodgeRoll < opponentDodge) {
-        logs.push({ round, attacker: 'me', action: 'dodged', damage: 0 });
-      } else {
-        let damage = Math.floor(myAttack * (0.8 + secureRandom() * 0.4));
-        const isCrit = myCritRoll < getCritChance(myItem.level);
-        if (isCrit) {
-          damage = Math.floor(damage * 1.5);
-          logs.push({ round, attacker: 'me', action: 'critical', damage });
-        } else {
-          logs.push({ round, attacker: 'me', action: 'attack', damage });
-        }
-        opponentHp -= damage;
+      // 회피 체크
+      if (roll < dodgeChance) {
+        return { action: 'dodged', damage: 0, heal: 0, effect: null };
       }
 
-      await new Promise(resolve => setTimeout(resolve, 300));
+      let damage = Math.floor(attackPower * (0.8 + secureRandom() * 0.4));
+      let action = 'attack';
+      let heal = 0;
+      let effect = null;
+
+      const effectRoll = secureRandom() * 100;
+      const critRoll = secureRandom() * 100;
+
+      // 크리티컬 (레벨 기반 확률)
+      if (critRoll < critChance) {
+        damage = Math.floor(damage * 1.5);
+        action = 'critical';
+      }
+      // 더블 어택 (5% 확률)
+      else if (effectRoll < 5) {
+        damage = Math.floor(damage * 2);
+        action = 'double';
+      }
+      // 흡혈 (5% 확률)
+      else if (effectRoll < 10) {
+        heal = Math.floor(damage * 0.3);
+        action = 'lifesteal';
+      }
+      // 독 공격 (5% 확률)
+      else if (effectRoll < 15) {
+        effect = 'poison';
+        action = 'poison';
+      }
+      // 스턴 (3% 확률)
+      else if (effectRoll < 18) {
+        effect = 'stun';
+        action = 'stun';
+      }
+      // 방어 관통 (5% 확률, 1.3배 데미지)
+      else if (effectRoll < 23) {
+        damage = Math.floor(damage * 1.3);
+        action = 'pierce';
+      }
+
+      return { action, damage, heal, effect };
+    };
+
+    while (myHp > 0 && opponentHp > 0 && round < 25) {
+      round++;
+
+      // 독 데미지 적용
+      if (myPoison > 0) {
+        const poisonDmg = Math.floor(myPoison);
+        myHp -= poisonDmg;
+        logs.push({ round, attacker: 'system', action: 'poison_tick', damage: poisonDmg, target: 'me' });
+        myPoison = 0;
+      }
+      if (opponentPoison > 0) {
+        const poisonDmg = Math.floor(opponentPoison);
+        opponentHp -= poisonDmg;
+        logs.push({ round, attacker: 'system', action: 'poison_tick', damage: poisonDmg, target: 'opponent' });
+        opponentPoison = 0;
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 200));
+      setBattleLog([...logs]);
+
+      if (myHp <= 0 || opponentHp <= 0) break;
+
+      // 내 턴 (스턴되지 않았다면)
+      if (!myStunned) {
+        const result = processAttack('me', myItem, opponentItem, opponentHp, myAttack);
+        logs.push({ round, attacker: 'me', action: result.action, damage: result.damage });
+        opponentHp -= result.damage;
+
+        if (result.heal > 0) {
+          myHp = Math.min(maxMyHp, myHp + result.heal);
+          logs.push({ round, attacker: 'me', action: 'heal', damage: result.heal });
+        }
+        if (result.effect === 'poison') {
+          opponentPoison = myAttack * 0.5;
+        }
+        if (result.effect === 'stun') {
+          opponentStunned = true;
+        }
+      } else {
+        logs.push({ round, attacker: 'me', action: 'stunned', damage: 0 });
+        myStunned = false;
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 250));
       setBattleLog([...logs]);
 
       if (opponentHp <= 0) break;
 
-      // 상대 턴
-      const myDodgeRoll = secureRandom() * 100;
-      const oppCritRoll = secureRandom() * 100;
-      const myDodge = getDodgeChance(myItem);
+      // 상대 턴 (스턴되지 않았다면)
+      if (!opponentStunned) {
+        const result = processAttack('opponent', opponentItem, myItem, myHp, opponentAttack);
+        logs.push({ round, attacker: 'opponent', action: result.action, damage: result.damage });
+        myHp -= result.damage;
 
-      if (myDodgeRoll < myDodge) {
-        logs.push({ round, attacker: 'opponent', action: 'dodged', damage: 0 });
-      } else {
-        let damage = Math.floor(opponentAttack * (0.8 + secureRandom() * 0.4));
-        const isCrit = oppCritRoll < getCritChance(opponentItem.level);
-        if (isCrit) {
-          damage = Math.floor(damage * 1.5);
-          logs.push({ round, attacker: 'opponent', action: 'critical', damage });
-        } else {
-          logs.push({ round, attacker: 'opponent', action: 'attack', damage });
+        if (result.heal > 0) {
+          opponentHp = Math.min(maxOpponentHp, opponentHp + result.heal);
+          logs.push({ round, attacker: 'opponent', action: 'heal', damage: result.heal });
         }
-        myHp -= damage;
+        if (result.effect === 'poison') {
+          myPoison = opponentAttack * 0.5;
+        }
+        if (result.effect === 'stun') {
+          myStunned = true;
+        }
+
+        // 반격 (8% 확률)
+        if (result.action !== 'dodged' && secureRandom() < 0.08 && myHp > 0) {
+          const counterDmg = Math.floor(myAttack * 0.5);
+          opponentHp -= counterDmg;
+          logs.push({ round, attacker: 'me', action: 'counter', damage: counterDmg });
+        }
+      } else {
+        logs.push({ round, attacker: 'opponent', action: 'stunned', damage: 0 });
+        opponentStunned = false;
       }
 
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await new Promise(resolve => setTimeout(resolve, 250));
       setBattleLog([...logs]);
     }
 
@@ -396,13 +483,28 @@ const BattlePanel = ({
                         animate={{ opacity: 1, y: 0 }}
                         style={{
                           ...styles.logEntry,
-                          color: log.attacker === 'me' ? '#4CAF50' : '#F44336'
+                          color: log.attacker === 'system' ? '#9C27B0'
+                            : log.attacker === 'me' ? '#4CAF50' : '#F44336'
                         }}
                       >
-                        {log.attacker === 'me' ? '나' : matchedOpponent?.nickname}
-                        {log.action === 'dodged' && ' 회피!'}
-                        {log.action === 'attack' && ` 공격! -${log.damage}`}
-                        {log.action === 'critical' && ` 크리티컬! -${log.damage}`}
+                        {log.attacker === 'system' ? (
+                          <>🧪 {log.target === 'me' ? '나' : matchedOpponent?.nickname} 독 데미지! -{log.damage}</>
+                        ) : (
+                          <>
+                            {log.attacker === 'me' ? '나' : matchedOpponent?.nickname}
+                            {log.action === 'dodged' && ' 회피! 💨'}
+                            {log.action === 'attack' && ` 공격! -${log.damage}`}
+                            {log.action === 'critical' && ` 💥크리티컬! -${log.damage}`}
+                            {log.action === 'double' && ` ⚡더블어택! -${log.damage}`}
+                            {log.action === 'lifesteal' && ` 🧛흡혈! -${log.damage}`}
+                            {log.action === 'poison' && ` 🧪독 공격! -${log.damage}`}
+                            {log.action === 'stun' && ` ⚡스턴! -${log.damage}`}
+                            {log.action === 'pierce' && ` 🗡️관통! -${log.damage}`}
+                            {log.action === 'counter' && ` ↩️반격! -${log.damage}`}
+                            {log.action === 'heal' && ` 💚회복! +${log.damage}`}
+                            {log.action === 'stunned' && ' 💫기절 상태!'}
+                          </>
+                        )}
                       </motion.div>
                     ))}
                   </div>
