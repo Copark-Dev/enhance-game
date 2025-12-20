@@ -69,7 +69,7 @@ const LiveFeed = ({ isOpen, onToggle, onSendChat, user }) => {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [isOpen]);
 
   const getTimeAgo = (timestamp) => {
     const now = new Date();

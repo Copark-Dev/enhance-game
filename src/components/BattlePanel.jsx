@@ -753,7 +753,7 @@ const BattlePanel = ({
                 </div>
               </div>
 
-              {selectedHistory.myTeamLevels && (
+              {selectedHistory.myTeamLevels && selectedHistory.oppTeamLevels && (
                 <div style={styles.detailSection}>
                   <div style={styles.detailLabel}>팀 구성</div>
                   <div style={styles.teamLevelsRow}>
