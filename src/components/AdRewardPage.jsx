@@ -5,8 +5,8 @@ import { useAuth } from '../context/AuthContext';
 import { formatGold } from '../utils/constants';
 
 const AD_DURATION = 30; // 30초
-const DAILY_LIMIT = 5; // 하루 5회
-const REWARD_GOLD = 10000; // 회당 10,000G
+const DAILY_LIMIT = 10; // 하루 10회
+const REWARD_GOLD = 50000; // 회당 50,000G
 
 const AdRewardPage = () => {
   const navigate = useNavigate();

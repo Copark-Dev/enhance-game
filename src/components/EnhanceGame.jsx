@@ -253,7 +253,7 @@ const EnhanceGame = () => {
             whileTap={{ scale: 0.95 }}
             style={styles.adBtn}
           >
-            🎬 +1만G
+            🎬 +5만G
           </motion.button>
           {(user?.email === 'psw4887@naver.com' || user?.nickname === '박세완') && (
             <motion.button onClick={() => navigate('/admin')} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} style={styles.adminBtn}>

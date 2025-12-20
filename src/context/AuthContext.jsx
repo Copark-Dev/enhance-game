@@ -6,7 +6,7 @@ const AuthContext = createContext();
 
 export const useAuth = () => useContext(AuthContext);
 
-// 오프라인 골드 계산 (시간당 5,000G, 최대 12시간 = 60,000G)
+// 오프라인 골드 계산 (시간당 2,000G, 최대 12시간 = 24,000G)
 const calculateOfflineGold = (lastLogin) => {
   if (!lastLogin) return 0;
   const lastTime = new Date(lastLogin).getTime();
@@ -16,9 +16,9 @@ const calculateOfflineGold = (lastLogin) => {
   // 최소 1시간 이상 접속 안했을 때만
   if (diffHours < 1) return 0;
 
-  // 시간당 5,000G, 최대 12시간
+  // 시간당 2,000G, 최대 12시간
   const hours = Math.min(diffHours, 12);
-  return Math.floor(hours * 5000);
+  return Math.floor(hours * 2000);
 };
 
 export const AuthProvider = ({ children }) => {
