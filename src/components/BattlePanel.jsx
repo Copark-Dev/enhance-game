@@ -12,7 +12,6 @@ const BattlePanel = ({
   getRandomOpponents,
   saveBattleNotification
 }) => {
-  const [selectedItem, setSelectedItem] = useState(null);
   const [matchedOpponent, setMatchedOpponent] = useState(null);
   const [isMatching, setIsMatching] = useState(false);
   const [battleResult, setBattleResult] = useState(null);
@@ -20,30 +19,50 @@ const BattlePanel = ({
   const [battleLog, setBattleLog] = useState([]);
   const [tab, setTab] = useState('battle'); // 'battle' | 'history'
   const [battleHistory, setBattleHistory] = useState([]);
+
+  // 순차 전투용 상태
+  const [myTeam, setMyTeam] = useState([]);
+  const [opponentTeam, setOpponentTeam] = useState([]);
+  const [currentFighters, setCurrentFighters] = useState({ my: null, opponent: null });
   const [currentHp, setCurrentHp] = useState({ my: 0, opponent: 0, maxMy: 0, maxOpponent: 0 });
+  const [defeatedCount, setDefeatedCount] = useState({ my: 0, opponent: 0 });
+
+  // 내 팀 구성 (현재 영웅 + 보관함)
+  const getMyTeam = () => {
+    const team = [];
+    if (currentItem && currentItem.level > 0) {
+      team.push({
+        id: 'current',
+        level: currentItem.level,
+        attack: currentItem.attack || 0,
+        hp: currentItem.hp || 0,
+        speed: currentItem.speed || 0,
+        isCurrent: true
+      });
+    }
+    inventory.forEach((item, idx) => {
+      if (item && (item.level || item) > 0) {
+        team.push({
+          id: `inv-${idx}`,
+          level: item.level || item,
+          attack: item.attack || 0,
+          hp: item.hp || 0,
+          speed: item.speed || 0
+        });
+      }
+    });
+    // 레벨 높은 순으로 정렬
+    return team.sort((a, b) => b.level - a.level);
+  };
 
   useEffect(() => {
     if (isOpen) {
-      // 히스토리 로드
       const history = JSON.parse(localStorage.getItem('battleHistory') || '[]');
       setBattleHistory(history.slice(0, 20));
-      // 현재 아이템이 있고, 아직 선택된 아이템이 없을 때만 자동 선택
-      // (재매칭 시 이전 선택 유지)
-      if (!selectedItem && currentItem && currentItem.level > 0) {
-        setSelectedItem({
-          id: 'current',
-          level: currentItem.level,
-          attack: currentItem.attack,
-          hp: currentItem.hp
-        });
-      }
+      setMyTeam(getMyTeam());
     }
-  }, [isOpen]);
+  }, [isOpen, currentItem, inventory]);
 
-  const loadHistory = () => {
-    const history = JSON.parse(localStorage.getItem('battleHistory') || '[]');
-    setBattleHistory(history.slice(0, 20));
-  };
 
   const saveBattleToHistory = (result) => {
     const history = JSON.parse(localStorage.getItem('battleHistory') || '[]');
@@ -81,36 +100,49 @@ const BattlePanel = ({
     return Math.min(5 + level * 2, 50);
   };
 
-  // 회피 확률 (HP + Speed 기반)
-  const getDodgeChance = (item) => {
-    const hp = item?.hp || 0;
-    const speed = item?.speed || 0;
-    return Math.min((hp / 80) + (speed / 20), 35);
-  };
 
-  // 속도 계산 (선공권 및 연속공격)
-  const calculateSpeed = (item) => {
-    return item?.speed || 0;
+  // 상대 팀 생성 (랜덤 생성)
+  const generateOpponentTeam = (baseLevel) => {
+    const teamSize = Math.min(myTeam.length, Math.floor(Math.random() * 3) + 2); // 2~4명
+    const team = [];
+    for (let i = 0; i < teamSize; i++) {
+      const levelVariance = Math.floor(Math.random() * 5) - 2; // -2 ~ +2
+      const level = Math.max(1, baseLevel + levelVariance);
+      team.push({
+        id: `opp-${i}`,
+        level,
+        attack: level * 50 + Math.floor(Math.random() * 100),
+        hp: level * 30 + Math.floor(Math.random() * 50),
+        speed: Math.floor(Math.random() * 100)
+      });
+    }
+    return team.sort((a, b) => b.level - a.level);
   };
 
   // 랜덤 매칭
   const startMatching = async () => {
-    if (!selectedItem || !getRandomOpponents) return;
+    if (myTeam.length === 0 || !getRandomOpponents) return;
 
     setIsMatching(true);
     setMatchedOpponent(null);
+    setOpponentTeam([]);
+    setDefeatedCount({ my: 0, opponent: 0 });
 
-    // 매칭 애니메이션 시간
     await new Promise(resolve => setTimeout(resolve, 1500));
 
     try {
       const opponents = await getRandomOpponents(5);
       if (opponents.length > 0) {
-        // 랜덤 선택
         const randomIndex = Math.floor(Math.random() * opponents.length);
-        setMatchedOpponent(opponents[randomIndex]);
+        const opponent = opponents[randomIndex];
+        setMatchedOpponent(opponent);
+
+        // 상대 팀 생성 (상대의 maxLevel 기반)
+        const avgLevel = Math.round(myTeam.reduce((sum, h) => sum + h.level, 0) / myTeam.length);
+        const oppTeam = generateOpponentTeam(avgLevel);
+        setOpponentTeam(oppTeam);
       } else {
-        alert('매칭 가능한 상대가 없습니다. 나중에 다시 시도해주세요!');
+        alert('매칭 가능한 상대가 없습니다!');
       }
     } catch (error) {
       console.error('매칭 실패:', error);
@@ -119,235 +151,183 @@ const BattlePanel = ({
     setIsMatching(false);
   };
 
-  // 배틀 시뮬레이션 (아이템 스탯 기반 + 다양한 효과)
+  // 순차 팀 배틀 시뮬레이션
   const simulateBattle = async () => {
-    if (!selectedItem || !matchedOpponent) return;
+    if (myTeam.length === 0 || opponentTeam.length === 0) return;
 
     setIsBattling(true);
     setBattleResult(null);
     setBattleLog([]);
+    setDefeatedCount({ my: 0, opponent: 0 });
 
-    const myItem = selectedItem;
-    const opponentItem = matchedOpponent.battleItem;
+    // 팀 복사 (HP 추적용)
+    const myFighters = myTeam.map(h => ({
+      ...h,
+      currentHp: calculateMaxHp(h),
+      maxHp: calculateMaxHp(h),
+      alive: true
+    }));
+    const oppFighters = opponentTeam.map(h => ({
+      ...h,
+      currentHp: calculateMaxHp(h),
+      maxHp: calculateMaxHp(h),
+      alive: true
+    }));
 
-    let myHp = calculateMaxHp(myItem);
-    let opponentHp = calculateMaxHp(opponentItem);
-    const maxMyHp = myHp;
-    const maxOpponentHp = opponentHp;
-
-    // 실시간 HP 초기화
-    setCurrentHp({ my: myHp, opponent: opponentHp, maxMy: maxMyHp, maxOpponent: maxOpponentHp });
-
-    // 속도 기반 선공권 결정
-    const mySpeed = calculateSpeed(myItem);
-    const opponentSpeed = calculateSpeed(opponentItem);
-    const iGoFirst = mySpeed >= opponentSpeed;
-
-    const myAttack = calculateAttack(myItem);
-    const opponentAttack = calculateAttack(opponentItem);
-
+    let myIdx = 0;
+    let oppIdx = 0;
     const logs = [];
-    let round = 0;
-    let myPoison = 0; // 독 데미지
-    let opponentPoison = 0;
-    let myStunned = false; // 스턴 상태
-    let opponentStunned = false;
+    let totalRounds = 0;
+    let myDefeated = 0;
+    let oppDefeated = 0;
 
-    // 암호학적 난수 생성
     const secureRandom = () => {
       const array = new Uint32Array(1);
       crypto.getRandomValues(array);
       return array[0] / 4294967295;
     };
 
-    // 공격 처리 함수
-    const processAttack = (attacker, attackerItem, defenderItem, defenderHp, attackPower) => {
-      const roll = secureRandom() * 100;
-      const dodgeChance = getDodgeChance(defenderItem);
-      const critChance = getCritChance(attackerItem.level);
+    // 현재 전투 중인 영웅 설정
+    setCurrentFighters({ my: myFighters[0], opponent: oppFighters[0] });
+    setCurrentHp({
+      my: myFighters[0].currentHp,
+      opponent: oppFighters[0].currentHp,
+      maxMy: myFighters[0].maxHp,
+      maxOpponent: oppFighters[0].maxHp
+    });
 
-      // 회피 체크
-      if (roll < dodgeChance) {
-        return { action: 'dodged', damage: 0, heal: 0, effect: null };
-      }
+    // 새 영웅 등장 알림
+    logs.push({ type: 'enter', side: 'my', hero: myFighters[0] });
+    logs.push({ type: 'enter', side: 'opponent', hero: oppFighters[0] });
+    setBattleLog([...logs]);
+    await new Promise(r => setTimeout(r, 800));
 
-      let damage = Math.floor(attackPower * (0.8 + secureRandom() * 0.4));
-      let action = 'attack';
-      let heal = 0;
-      let effect = null;
+    // 배틀 루프
+    while (myIdx < myFighters.length && oppIdx < oppFighters.length) {
+      const myHero = myFighters[myIdx];
+      const oppHero = oppFighters[oppIdx];
+      let round = 0;
 
-      const effectRoll = secureRandom() * 100;
-      const critRoll = secureRandom() * 100;
+      // 1:1 전투
+      while (myHero.currentHp > 0 && oppHero.currentHp > 0 && round < 30) {
+        round++;
+        totalRounds++;
 
-      // 크리티컬 (레벨 기반 확률)
-      if (critRoll < critChance) {
-        damage = Math.floor(damage * 1.5);
-        action = 'critical';
-      }
-      // 더블 어택 (5% 확률)
-      else if (effectRoll < 5) {
-        damage = Math.floor(damage * 2);
-        action = 'double';
-      }
-      // 흡혈 (5% 확률)
-      else if (effectRoll < 10) {
-        heal = Math.floor(damage * 0.3);
-        action = 'lifesteal';
-      }
-      // 독 공격 (5% 확률)
-      else if (effectRoll < 15) {
-        effect = 'poison';
-        action = 'poison';
-      }
-      // 스턴 (3% 확률)
-      else if (effectRoll < 18) {
-        effect = 'stun';
-        action = 'stun';
-      }
-      // 방어 관통 (5% 확률, 1.3배 데미지)
-      else if (effectRoll < 23) {
-        damage = Math.floor(damage * 1.3);
-        action = 'pierce';
-      }
+        // 내 공격
+        const myDmg = Math.floor(calculateAttack(myHero) * (0.8 + secureRandom() * 0.4));
+        const myCrit = secureRandom() < getCritChance(myHero.level) / 100;
+        const finalMyDmg = myCrit ? Math.floor(myDmg * 1.5) : myDmg;
 
-      return { action, damage, heal, effect };
-    };
+        oppHero.currentHp -= finalMyDmg;
+        logs.push({
+          type: 'attack',
+          attacker: 'me',
+          damage: finalMyDmg,
+          critical: myCrit,
+          heroLevel: myHero.level
+        });
 
-    while (myHp > 0 && opponentHp > 0 && round < 25) {
-      round++;
+        setBattleLog([...logs]);
+        setCurrentHp({
+          my: Math.max(0, myHero.currentHp),
+          opponent: Math.max(0, oppHero.currentHp),
+          maxMy: myHero.maxHp,
+          maxOpponent: oppHero.maxHp
+        });
+        await new Promise(r => setTimeout(r, 500));
 
-      // 독 데미지 적용
-      if (myPoison > 0) {
-        const poisonDmg = Math.floor(myPoison);
-        myHp -= poisonDmg;
-        logs.push({ round, attacker: 'system', action: 'poison_tick', damage: poisonDmg, target: 'me' });
-        myPoison = 0;
-      }
-      if (opponentPoison > 0) {
-        const poisonDmg = Math.floor(opponentPoison);
-        opponentHp -= poisonDmg;
-        logs.push({ round, attacker: 'system', action: 'poison_tick', damage: poisonDmg, target: 'opponent' });
-        opponentPoison = 0;
-      }
-
-      await new Promise(resolve => setTimeout(resolve, 400));
-      setBattleLog([...logs]);
-      setCurrentHp({ my: Math.max(0, myHp), opponent: Math.max(0, opponentHp), maxMy: maxMyHp, maxOpponent: maxOpponentHp });
-
-      if (myHp <= 0 || opponentHp <= 0) break;
-
-      // 선공권에 따른 턴 순서
-      const firstAttacker = iGoFirst ? 'me' : 'opponent';
-      const secondAttacker = iGoFirst ? 'opponent' : 'me';
-
-      // 내 턴 (스턴되지 않았다면)
-      if (!myStunned) {
-        const result = processAttack('me', myItem, opponentItem, opponentHp, myAttack);
-        logs.push({ round, attacker: 'me', action: result.action, damage: result.damage });
-        opponentHp -= result.damage;
-
-        if (result.heal > 0) {
-          myHp = Math.min(maxMyHp, myHp + result.heal);
-          await new Promise(resolve => setTimeout(resolve, 300));
-          logs.push({ round, attacker: 'me', action: 'heal', damage: result.heal });
-        }
-        if (result.effect === 'poison') {
-          opponentPoison = myAttack * 0.5;
-        }
-        if (result.effect === 'stun') {
-          opponentStunned = true;
-        }
-
-        // 속도 기반 연속 공격 (속도 50당 5% 확률, 최대 25%)
-        const doubleAttackChance = Math.min(mySpeed / 10, 25);
-        if (secureRandom() * 100 < doubleAttackChance && opponentHp > 0) {
-          await new Promise(resolve => setTimeout(resolve, 400));
+        if (oppHero.currentHp <= 0) {
+          oppHero.alive = false;
+          oppDefeated++;
+          setDefeatedCount({ my: myDefeated, opponent: oppDefeated });
+          logs.push({ type: 'defeat', side: 'opponent', hero: oppHero, killedBy: myHero });
           setBattleLog([...logs]);
-          const extraResult = processAttack('me', myItem, opponentItem, opponentHp, myAttack * 0.7);
-          logs.push({ round, attacker: 'me', action: 'swift', damage: extraResult.damage });
-          opponentHp -= extraResult.damage;
-        }
-      } else {
-        logs.push({ round, attacker: 'me', action: 'stunned', damage: 0 });
-        myStunned = false;
-      }
+          await new Promise(r => setTimeout(r, 600));
 
-      await new Promise(resolve => setTimeout(resolve, 700));
-      setBattleLog([...logs]);
-      setCurrentHp({ my: Math.max(0, myHp), opponent: Math.max(0, opponentHp), maxMy: maxMyHp, maxOpponent: maxOpponentHp });
-
-      if (opponentHp <= 0) break;
-
-      // 상대 턴 (스턴되지 않았다면)
-      if (!opponentStunned) {
-        const result = processAttack('opponent', opponentItem, myItem, myHp, opponentAttack);
-        logs.push({ round, attacker: 'opponent', action: result.action, damage: result.damage });
-        myHp -= result.damage;
-
-        if (result.heal > 0) {
-          opponentHp = Math.min(maxOpponentHp, opponentHp + result.heal);
-          await new Promise(resolve => setTimeout(resolve, 300));
-          logs.push({ round, attacker: 'opponent', action: 'heal', damage: result.heal });
-        }
-        if (result.effect === 'poison') {
-          myPoison = opponentAttack * 0.5;
-        }
-        if (result.effect === 'stun') {
-          myStunned = true;
+          oppIdx++;
+          if (oppIdx < oppFighters.length) {
+            logs.push({ type: 'enter', side: 'opponent', hero: oppFighters[oppIdx] });
+            setCurrentFighters({ my: myHero, opponent: oppFighters[oppIdx] });
+            setCurrentHp({
+              my: myHero.currentHp,
+              opponent: oppFighters[oppIdx].currentHp,
+              maxMy: myHero.maxHp,
+              maxOpponent: oppFighters[oppIdx].maxHp
+            });
+            setBattleLog([...logs]);
+            await new Promise(r => setTimeout(r, 500));
+          }
+          break;
         }
 
-        // 속도 기반 연속 공격
-        const opponentDoubleChance = Math.min(opponentSpeed / 10, 25);
-        if (secureRandom() * 100 < opponentDoubleChance && myHp > 0) {
-          await new Promise(resolve => setTimeout(resolve, 400));
+        // 상대 공격
+        const oppDmg = Math.floor(calculateAttack(oppHero) * (0.8 + secureRandom() * 0.4));
+        const oppCrit = secureRandom() < getCritChance(oppHero.level) / 100;
+        const finalOppDmg = oppCrit ? Math.floor(oppDmg * 1.5) : oppDmg;
+
+        myHero.currentHp -= finalOppDmg;
+        logs.push({
+          type: 'attack',
+          attacker: 'opponent',
+          damage: finalOppDmg,
+          critical: oppCrit,
+          heroLevel: oppHero.level
+        });
+
+        setBattleLog([...logs]);
+        setCurrentHp({
+          my: Math.max(0, myHero.currentHp),
+          opponent: Math.max(0, oppHero.currentHp),
+          maxMy: myHero.maxHp,
+          maxOpponent: oppHero.maxHp
+        });
+        await new Promise(r => setTimeout(r, 500));
+
+        if (myHero.currentHp <= 0) {
+          myHero.alive = false;
+          myDefeated++;
+          setDefeatedCount({ my: myDefeated, opponent: oppDefeated });
+          logs.push({ type: 'defeat', side: 'my', hero: myHero, killedBy: oppHero });
           setBattleLog([...logs]);
-          const extraResult = processAttack('opponent', opponentItem, myItem, myHp, opponentAttack * 0.7);
-          logs.push({ round, attacker: 'opponent', action: 'swift', damage: extraResult.damage });
-          myHp -= extraResult.damage;
-        }
+          await new Promise(r => setTimeout(r, 600));
 
-        // 반격 (8% 확률)
-        if (result.action !== 'dodged' && secureRandom() < 0.08 && myHp > 0) {
-          await new Promise(resolve => setTimeout(resolve, 400));
-          setBattleLog([...logs]);
-          const counterDmg = Math.floor(myAttack * 0.5);
-          opponentHp -= counterDmg;
-          logs.push({ round, attacker: 'me', action: 'counter', damage: counterDmg });
+          myIdx++;
+          if (myIdx < myFighters.length) {
+            logs.push({ type: 'enter', side: 'my', hero: myFighters[myIdx] });
+            setCurrentFighters({ my: myFighters[myIdx], opponent: oppHero });
+            setCurrentHp({
+              my: myFighters[myIdx].currentHp,
+              opponent: oppHero.currentHp,
+              maxMy: myFighters[myIdx].maxHp,
+              maxOpponent: oppHero.maxHp
+            });
+            setBattleLog([...logs]);
+            await new Promise(r => setTimeout(r, 500));
+          }
+          break;
         }
-      } else {
-        logs.push({ round, attacker: 'opponent', action: 'stunned', damage: 0 });
-        opponentStunned = false;
       }
-
-      await new Promise(resolve => setTimeout(resolve, 700));
-      setBattleLog([...logs]);
-      setCurrentHp({ my: Math.max(0, myHp), opponent: Math.max(0, opponentHp), maxMy: maxMyHp, maxOpponent: maxOpponentHp });
     }
 
-    const won = myHp > opponentHp;
-    const reward = won ? Math.floor(1000 + opponentItem.level * 500 + secureRandom() * 1000) : 0;
+    const won = oppIdx >= oppFighters.length;
+    const totalOppLevel = opponentTeam.reduce((sum, h) => sum + h.level, 0);
+    const reward = won ? Math.floor(2000 + totalOppLevel * 300 + secureRandom() * 2000) : 0;
 
     const result = {
       won,
-      myLevel: myItem.level,
-      myAttack: myItem.attack,
-      myHp: myItem.hp,
-      mySpeed: myItem.speed || 0,
-      opponentLevel: opponentItem.level,
+      myTeamSize: myTeam.length,
+      oppTeamSize: opponentTeam.length,
+      myDefeated,
+      oppDefeated,
       opponentName: matchedOpponent.nickname,
       opponentId: matchedOpponent.id,
       reward,
-      finalMyHp: Math.max(0, myHp),
-      finalOpponentHp: Math.max(0, opponentHp),
-      maxMyHp,
-      maxOpponentHp,
-      rounds: round
+      rounds: totalRounds
     };
 
     setBattleResult(result);
     saveBattleToHistory(result);
 
-    // 상대에게 배틀 알림 저장
     if (saveBattleNotification) {
       await saveBattleNotification(matchedOpponent.id, result);
     }
@@ -373,20 +353,8 @@ const BattlePanel = ({
 
   if (!isOpen) return null;
 
-  // 배틀 가능한 아이템 목록 (현재 강화중 + 인벤토리)
-  const battleItems = [
-    ...(currentItem && currentItem.level > 0 ? [{
-      id: 'current',
-      level: currentItem.level,
-      attack: currentItem.attack,
-      hp: currentItem.hp,
-      isCurrent: true
-    }] : []),
-    ...inventory.filter(item => item.level > 0).map((item, idx) => ({
-      ...item,
-      id: `inv-${idx}`
-    }))
-  ];
+  // 팀 전투력 계산
+  const getTeamPower = (team) => team.reduce((sum, h) => sum + calculatePower(h), 0);
 
   return (
     <AnimatePresence>
@@ -455,27 +423,16 @@ const BattlePanel = ({
                   </motion.div>
 
                   <div style={styles.battleStats}>
-                    <div style={styles.statRow}>
-                      <span>나 (+{battleResult.myLevel})</span>
-                      <div style={styles.hpBar}>
-                        <div style={{
-                          ...styles.hpFill,
-                          width: `${(battleResult.finalMyHp / battleResult.maxMyHp) * 100}%`,
-                          backgroundColor: '#4CAF50'
-                        }} />
-                      </div>
-                      <span>{battleResult.finalMyHp}/{battleResult.maxMyHp}</span>
+                    <div style={styles.teamResult}>
+                      <span style={{ color: '#4CAF50' }}>내 팀</span>
+                      <span>{battleResult.myTeamSize - battleResult.myDefeated} / {battleResult.myTeamSize} 생존</span>
                     </div>
-                    <div style={styles.statRow}>
-                      <span>{battleResult.opponentName} (+{battleResult.opponentLevel})</span>
-                      <div style={styles.hpBar}>
-                        <div style={{
-                          ...styles.hpFill,
-                          width: `${(battleResult.finalOpponentHp / battleResult.maxOpponentHp) * 100}%`,
-                          backgroundColor: '#F44336'
-                        }} />
-                      </div>
-                      <span>{battleResult.finalOpponentHp}/{battleResult.maxOpponentHp}</span>
+                    <div style={styles.teamResult}>
+                      <span style={{ color: '#F44336' }}>{battleResult.opponentName}</span>
+                      <span>{battleResult.oppTeamSize - battleResult.oppDefeated} / {battleResult.oppTeamSize} 생존</span>
+                    </div>
+                    <div style={{ textAlign: 'center', color: '#888', fontSize: 12, marginTop: 8 }}>
+                      총 {battleResult.rounds} 라운드
                     </div>
                   </div>
 
@@ -500,6 +457,18 @@ const BattlePanel = ({
                 </div>
               ) : isBattling ? (
                 <div style={styles.battleScene}>
+                  {/* 팀 현황 */}
+                  <div style={styles.teamStatus}>
+                    <div style={styles.teamStatusSide}>
+                      <span style={{ color: '#4CAF50', fontWeight: 'bold' }}>내 팀</span>
+                      <span>{myTeam.length - defeatedCount.my} / {myTeam.length}</span>
+                    </div>
+                    <div style={styles.teamStatusSide}>
+                      <span style={{ color: '#F44336', fontWeight: 'bold' }}>상대</span>
+                      <span>{opponentTeam.length - defeatedCount.opponent} / {opponentTeam.length}</span>
+                    </div>
+                  </div>
+
                   {/* 배틀 아레나 */}
                   <div style={styles.battleArena}>
                     {/* 내 캐릭터 */}
@@ -507,8 +476,7 @@ const BattlePanel = ({
                       style={styles.fighterCard}
                       animate={{
                         x: battleLog.length > 0 && battleLog[battleLog.length-1]?.attacker === 'me' ? [0, 30, -5, 0] : 0,
-                        scale: battleLog.length > 0 && battleLog[battleLog.length-1]?.attacker === 'opponent' && battleLog[battleLog.length-1]?.action !== 'dodged' ? [1, 0.85, 1.05, 1] : 1,
-                        rotate: battleLog.length > 0 && battleLog[battleLog.length-1]?.attacker === 'opponent' && battleLog[battleLog.length-1]?.action !== 'dodged' ? [0, -8, 5, 0] : 0
+                        scale: battleLog.length > 0 && battleLog[battleLog.length-1]?.attacker === 'opponent' ? [1, 0.85, 1.05, 1] : 1,
                       }}
                       transition={{ duration: 0.4, ease: "easeOut" }}
                     >
@@ -516,26 +484,22 @@ const BattlePanel = ({
                         <motion.div
                           style={{
                             ...styles.fighterHpBar,
-                            background: currentHp.my / currentHp.maxMy > 0.3
+                            background: currentHp.maxMy > 0 && currentHp.my / currentHp.maxMy > 0.3
                               ? 'linear-gradient(90deg, #4CAF50, #8BC34A)'
                               : 'linear-gradient(90deg, #FF5722, #FF9800)'
                           }}
-                          animate={{ width: `${(currentHp.my / currentHp.maxMy) * 100}%` }}
+                          animate={{ width: `${currentHp.maxMy > 0 ? (currentHp.my / currentHp.maxMy) * 100 : 0}%` }}
                           transition={{ duration: 0.3 }}
                         />
                       </div>
                       <div style={styles.fighterHpText}>{currentHp.my}/{currentHp.maxMy}</div>
                       <motion.img
-                        src={getItemImage(selectedItem?.level || 0)}
+                        src={getItemImage(currentFighters.my?.level || 0)}
                         alt=""
                         style={styles.fighterImgLarge}
-                        animate={{
-                          filter: battleLog.length > 0 && battleLog[battleLog.length-1]?.attacker === 'opponent' && battleLog[battleLog.length-1]?.action !== 'dodged'
-                            ? ['brightness(1)', 'brightness(2)', 'brightness(1)'] : 'brightness(1)'
-                        }}
                       />
-                      <div style={{ color: getLevelColor(selectedItem?.level || 0), fontWeight: 'bold', fontSize: 13 }}>
-                        +{selectedItem?.level}
+                      <div style={{ color: getLevelColor(currentFighters.my?.level || 0), fontWeight: 'bold', fontSize: 13 }}>
+                        +{currentFighters.my?.level || 0}
                       </div>
                       <div style={{ color: '#4CAF50', fontSize: 11 }}>나</div>
                     </motion.div>
@@ -554,8 +518,7 @@ const BattlePanel = ({
                       style={styles.fighterCard}
                       animate={{
                         x: battleLog.length > 0 && battleLog[battleLog.length-1]?.attacker === 'opponent' ? [0, -30, 5, 0] : 0,
-                        scale: battleLog.length > 0 && battleLog[battleLog.length-1]?.attacker === 'me' && battleLog[battleLog.length-1]?.action !== 'dodged' ? [1, 0.85, 1.05, 1] : 1,
-                        rotate: battleLog.length > 0 && battleLog[battleLog.length-1]?.attacker === 'me' && battleLog[battleLog.length-1]?.action !== 'dodged' ? [0, 8, -5, 0] : 0
+                        scale: battleLog.length > 0 && battleLog[battleLog.length-1]?.attacker === 'me' ? [1, 0.85, 1.05, 1] : 1,
                       }}
                       transition={{ duration: 0.4, ease: "easeOut" }}
                     >
@@ -563,26 +526,22 @@ const BattlePanel = ({
                         <motion.div
                           style={{
                             ...styles.fighterHpBar,
-                            background: currentHp.opponent / currentHp.maxOpponent > 0.3
+                            background: currentHp.maxOpponent > 0 && currentHp.opponent / currentHp.maxOpponent > 0.3
                               ? 'linear-gradient(90deg, #F44336, #E91E63)'
                               : 'linear-gradient(90deg, #FF5722, #FF9800)'
                           }}
-                          animate={{ width: `${(currentHp.opponent / currentHp.maxOpponent) * 100}%` }}
+                          animate={{ width: `${currentHp.maxOpponent > 0 ? (currentHp.opponent / currentHp.maxOpponent) * 100 : 0}%` }}
                           transition={{ duration: 0.3 }}
                         />
                       </div>
                       <div style={styles.fighterHpText}>{currentHp.opponent}/{currentHp.maxOpponent}</div>
                       <motion.img
-                        src={getItemImage(matchedOpponent?.battleItem?.level || 0)}
+                        src={getItemImage(currentFighters.opponent?.level || 0)}
                         alt=""
                         style={styles.fighterImgLarge}
-                        animate={{
-                          filter: battleLog.length > 0 && battleLog[battleLog.length-1]?.attacker === 'me' && battleLog[battleLog.length-1]?.action !== 'dodged'
-                            ? ['brightness(1)', 'brightness(2)', 'brightness(1)'] : 'brightness(1)'
-                        }}
                       />
-                      <div style={{ color: getLevelColor(matchedOpponent?.battleItem?.level || 0), fontWeight: 'bold', fontSize: 13 }}>
-                        +{matchedOpponent?.battleItem?.level}
+                      <div style={{ color: getLevelColor(currentFighters.opponent?.level || 0), fontWeight: 'bold', fontSize: 13 }}>
+                        +{currentFighters.opponent?.level || 0}
                       </div>
                       <div style={{ color: '#F44336', fontSize: 11 }}>{matchedOpponent?.nickname}</div>
                     </motion.div>
@@ -590,36 +549,33 @@ const BattlePanel = ({
 
                   {/* 배틀 로그 */}
                   <div style={styles.battleLogBox}>
-                    {battleLog.slice(-4).map((log, i) => (
+                    {battleLog.slice(-5).map((log, i) => (
                       <motion.div
-                        key={`${log.round}-${log.attacker}-${i}`}
-                        initial={{ opacity: 0, x: log.attacker === 'me' ? -50 : 50, scale: 0.8 }}
-                        animate={{ opacity: 1, x: 0, scale: 1 }}
-                        transition={{ duration: 0.3, type: "spring", stiffness: 200 }}
+                        key={i}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
                         style={{
                           ...styles.logEntry,
-                          textAlign: log.attacker === 'me' ? 'left' : log.attacker === 'opponent' ? 'right' : 'center',
-                          background: log.attacker === 'me' ? 'rgba(76,175,80,0.2)' : log.attacker === 'opponent' ? 'rgba(244,67,54,0.2)' : 'rgba(156,39,176,0.2)',
-                          borderLeft: log.attacker === 'me' ? '3px solid #4CAF50' : 'none',
-                          borderRight: log.attacker === 'opponent' ? '3px solid #F44336' : 'none',
+                          textAlign: log.type === 'enter' || log.type === 'defeat' ? 'center' : log.attacker === 'me' ? 'left' : 'right',
+                          background: log.type === 'enter' ? 'rgba(255,215,0,0.2)' :
+                            log.type === 'defeat' ? 'rgba(128,128,128,0.3)' :
+                            log.attacker === 'me' ? 'rgba(76,175,80,0.2)' : 'rgba(244,67,54,0.2)',
                         }}
                       >
-                        {log.attacker === 'system' ? (
-                          <span style={{color: '#9C27B0'}}>🧪 {log.target === 'me' ? '나' : matchedOpponent?.nickname} 독! -{log.damage}</span>
-                        ) : (
+                        {log.type === 'enter' && (
+                          <span style={{ color: '#FFD700' }}>
+                            ⚡ +{log.hero.level} {log.side === 'my' ? '출전!' : '등장!'}
+                          </span>
+                        )}
+                        {log.type === 'defeat' && (
+                          <span style={{ color: '#888' }}>
+                            💀 +{log.hero.level} 쓰러짐! (+{log.killedBy.level}이 처치)
+                          </span>
+                        )}
+                        {log.type === 'attack' && (
                           <span style={{ color: log.attacker === 'me' ? '#4CAF50' : '#F44336' }}>
-                            {log.action === 'dodged' && '💨 회피!'}
-                            {log.action === 'attack' && `⚔️ -${log.damage}`}
-                            {log.action === 'critical' && `💥 크리티컬! -${log.damage}`}
-                            {log.action === 'double' && `⚡ 더블! -${log.damage}`}
-                            {log.action === 'lifesteal' && `🧛 흡혈! -${log.damage}`}
-                            {log.action === 'poison' && `🧪 독! -${log.damage}`}
-                            {log.action === 'stun' && `⚡ 스턴! -${log.damage}`}
-                            {log.action === 'pierce' && `🗡️ 관통! -${log.damage}`}
-                            {log.action === 'counter' && `↩️ 반격! -${log.damage}`}
-                            {log.action === 'heal' && `💚 +${log.damage}`}
-                            {log.action === 'stunned' && '💫 기절!'}
-                            {log.action === 'swift' && `💨 연속! -${log.damage}`}
+                            {log.critical ? '💥 크리티컬! ' : '⚔️ '}
+                            -{log.damage}
                           </span>
                         )}
                       </motion.div>
@@ -641,46 +597,46 @@ const BattlePanel = ({
                 <div style={styles.matchedScene}>
                   <div style={styles.matchedTitle}>🎯 상대 발견!</div>
 
-                  <div style={styles.matchedVersus}>
-                    <div style={styles.matchedCard}>
-                      <img src={getItemImage(selectedItem?.level || 0)} alt="" style={styles.matchedItemImg} />
-                      <div style={{ color: getLevelColor(selectedItem?.level || 0), fontSize: 14, fontWeight: 'bold' }}>
-                        +{selectedItem?.level} {getLevelTier(selectedItem?.level)}
+                  <div style={styles.teamVersus}>
+                    {/* 내 팀 */}
+                    <div style={styles.teamColumn}>
+                      <div style={styles.teamHeader}>
+                        <span style={{ color: '#4CAF50' }}>내 팀</span>
+                        <span style={{ color: '#888', fontSize: 11 }}>{myTeam.length}명</span>
                       </div>
-                      <div style={styles.matchedStats}>
-                        <span>⚔️ {selectedItem?.attack}</span>
-                        <span>💨 {selectedItem?.speed || 0}</span>
+                      <div style={styles.teamLineup}>
+                        {myTeam.slice(0, 4).map((hero, i) => (
+                          <div key={hero.id} style={styles.heroMini}>
+                            <img src={getItemImage(hero.level)} alt="" style={styles.heroMiniImg} />
+                            <span style={{ color: getLevelColor(hero.level), fontSize: 10 }}>+{hero.level}</span>
+                          </div>
+                        ))}
+                        {myTeam.length > 4 && <span style={{ color: '#888', fontSize: 11 }}>+{myTeam.length - 4}</span>}
                       </div>
-                      <div style={styles.matchedStats}>
-                        <span>❤️ {calculateMaxHp(selectedItem)}</span>
-                      </div>
-                      <div style={styles.matchedPower}>
-                        전투력: {calculatePower(selectedItem)}
+                      <div style={styles.teamPower}>
+                        전투력: {getTeamPower(myTeam)}
                       </div>
                     </div>
 
                     <div style={styles.matchedVsText}>VS</div>
 
-                    <div style={styles.matchedCard}>
-                      <img
-                        src={matchedOpponent.profileImage || '/default-avatar.png'}
-                        alt=""
-                        style={styles.matchedAvatar}
-                        onError={(e) => { e.target.src = '/default-avatar.png'; }}
-                      />
-                      <div style={{ color: '#fff', fontWeight: 'bold' }}>{matchedOpponent.nickname}</div>
-                      <div style={{ color: getLevelColor(matchedOpponent.battleItem?.level || 0), fontSize: 14 }}>
-                        +{matchedOpponent.battleItem?.level || 0}
+                    {/* 상대 팀 */}
+                    <div style={styles.teamColumn}>
+                      <div style={styles.teamHeader}>
+                        <span style={{ color: '#F44336' }}>{matchedOpponent.nickname}</span>
+                        <span style={{ color: '#888', fontSize: 11 }}>{opponentTeam.length}명</span>
                       </div>
-                      <div style={styles.matchedStats}>
-                        <span>⚔️ {matchedOpponent.battleItem?.attack}</span>
-                        <span>💨 {matchedOpponent.battleItem?.speed || 0}</span>
+                      <div style={styles.teamLineup}>
+                        {opponentTeam.slice(0, 4).map((hero, i) => (
+                          <div key={hero.id} style={styles.heroMini}>
+                            <img src={getItemImage(hero.level)} alt="" style={styles.heroMiniImg} />
+                            <span style={{ color: getLevelColor(hero.level), fontSize: 10 }}>+{hero.level}</span>
+                          </div>
+                        ))}
+                        {opponentTeam.length > 4 && <span style={{ color: '#888', fontSize: 11 }}>+{opponentTeam.length - 4}</span>}
                       </div>
-                      <div style={styles.matchedStats}>
-                        <span>❤️ {calculateMaxHp(matchedOpponent.battleItem)}</span>
-                      </div>
-                      <div style={styles.matchedPower}>
-                        전투력: {calculatePower(matchedOpponent.battleItem)}
+                      <div style={styles.teamPower}>
+                        전투력: {getTeamPower(opponentTeam)}
                       </div>
                     </div>
                   </div>
@@ -692,7 +648,7 @@ const BattlePanel = ({
                       whileTap={{ scale: 0.98 }}
                       style={styles.battleBtn}
                     >
-                      ⚔️ 배틀 시작!
+                      ⚔️ 팀 배틀 시작!
                     </motion.button>
                     <motion.button
                       onClick={startMatching}
@@ -706,42 +662,45 @@ const BattlePanel = ({
                 </div>
               ) : (
                 <>
+                  {/* 내 팀 라인업 */}
                   <div style={styles.section}>
-                    <div style={styles.sectionTitle}>내 영웅 선택</div>
-                    {battleItems.length === 0 ? (
+                    <div style={styles.sectionTitle}>내 팀 라인업 ({myTeam.length}명)</div>
+                    {myTeam.length === 0 ? (
                       <div style={styles.empty}>강화된 영웅이 없습니다. 먼저 영웅을 강화하세요!</div>
                     ) : (
                       <div style={styles.itemGrid}>
-                        {battleItems.map((item) => (
-                          <motion.div
-                            key={item.id}
-                            onClick={() => setSelectedItem(item)}
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
+                        {myTeam.map((hero) => (
+                          <div
+                            key={hero.id}
                             style={{
                               ...styles.itemCard,
-                              borderColor: selectedItem?.id === item.id ? '#FFD700' : '#333',
-                              backgroundColor: selectedItem?.id === item.id ? 'rgba(255,215,0,0.2)' : 'rgba(255,255,255,0.05)'
+                              borderColor: getLevelColor(hero.level),
+                              backgroundColor: 'rgba(255,255,255,0.05)'
                             }}
                           >
-                            {item.isCurrent && <div style={styles.currentBadge}>장착중</div>}
-                            <img src={getItemImage(item.level)} alt="" style={styles.itemImg} />
-                            <div style={{ color: getLevelColor(item.level), fontSize: 12, fontWeight: 'bold' }}>
-                              +{item.level}
+                            {hero.isCurrent && <div style={styles.currentBadge}>현재</div>}
+                            <img src={getItemImage(hero.level)} alt="" style={styles.itemImg} />
+                            <div style={{ color: getLevelColor(hero.level), fontSize: 12, fontWeight: 'bold' }}>
+                              +{hero.level}
                             </div>
                             <div style={{ fontSize: 9, color: '#888' }}>
-                              ⚔️{item.attack} 💨{item.speed || 0}
+                              ⚔️{hero.attack}
                             </div>
-                            <div style={{ fontSize: 9, color: '#F44336' }}>
-                              ❤️{calculateMaxHp(item)}
-                            </div>
-                          </motion.div>
+                          </div>
                         ))}
                       </div>
                     )}
                   </div>
 
-                  {selectedItem && (
+                  {myTeam.length > 0 && (
+                    <div style={{ textAlign: 'center', marginBottom: 12 }}>
+                      <div style={{ color: '#FFD700', fontSize: 14, fontWeight: 'bold' }}>
+                        팀 전투력: {getTeamPower(myTeam)}
+                      </div>
+                    </div>
+                  )}
+
+                  {myTeam.length > 0 && (
                     <motion.button
                       onClick={startMatching}
                       whileHover={{ scale: 1.02 }}
@@ -778,11 +737,22 @@ const BattlePanel = ({
                       </span>
                     </div>
                     <div style={{ color: '#aaa', fontSize: 12, marginTop: 4 }}>
-                      vs {battle.opponentName} (+{battle.opponentLevel})
+                      vs {battle.opponentName}
                     </div>
                     <div style={{ color: '#888', fontSize: 11, marginTop: 2 }}>
-                      내 영웅: +{battle.myLevel} (⚔️{battle.myAttack || '-'} 💨{battle.mySpeed || '-'}) | {battle.rounds}라운드
-                      {battle.won && <span style={{ color: '#FFD700' }}> | +{formatGold(battle.reward)}G</span>}
+                      {battle.myTeamSize ? (
+                        // 새로운 팀 배틀 형식
+                        <>
+                          내 팀: {battle.myTeamSize - battle.myDefeated}/{battle.myTeamSize} 생존 | {battle.rounds}라운드
+                          {battle.won && <span style={{ color: '#FFD700' }}> | +{formatGold(battle.reward)}G</span>}
+                        </>
+                      ) : (
+                        // 이전 1v1 형식 (호환성)
+                        <>
+                          내 영웅: +{battle.myLevel} | {battle.rounds}라운드
+                          {battle.won && <span style={{ color: '#FFD700' }}> | +{formatGold(battle.reward)}G</span>}
+                        </>
+                      )}
                     </div>
                   </div>
                 ))
@@ -1146,6 +1116,80 @@ const styles = {
     alignItems: 'center',
     gap: 4,
     fontSize: 13,
+  },
+  teamResult: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    padding: '8px 12px',
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 8,
+    marginBottom: 6,
+    fontSize: 13,
+    color: '#fff',
+  },
+  teamStatus: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+    padding: '8px 16px',
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    borderRadius: 10,
+  },
+  teamStatusSide: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: 2,
+    fontSize: 12,
+    color: '#fff',
+  },
+  teamVersus: {
+    display: 'flex',
+    justifyContent: 'space-around',
+    alignItems: 'flex-start',
+    marginBottom: 16,
+    gap: 10,
+  },
+  teamColumn: {
+    flex: 1,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 12,
+    padding: 10,
+    textAlign: 'center',
+  },
+  teamHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+    paddingBottom: 6,
+    borderBottom: '1px solid rgba(255,255,255,0.1)',
+    fontSize: 13,
+    fontWeight: 'bold',
+  },
+  teamLineup: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: 6,
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  heroMini: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: 2,
+  },
+  heroMiniImg: {
+    width: 32,
+    height: 32,
+    borderRadius: 6,
+    border: '1px solid #444',
+  },
+  teamPower: {
+    fontSize: 11,
+    color: '#FFD700',
+    fontWeight: 'bold',
   },
 };
 

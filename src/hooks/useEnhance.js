@@ -251,28 +251,32 @@ export const useEnhance = (initialLevel = 0, initialGold = 50000) => {
           setTimeout(() => triggerEvent('shieldGain'), 1000);
         }
       } else {
-        // 🌟 축복 체크 (하락 방지)
-        if (buffs.blessing) {
+        // 하락 여부 먼저 판정
+        const downgradeRoll = secureRandom();
+        const willDowngrade = downgradeRoll < downgradeRate && level > 0;
+
+        // 🌟 축복 체크 (하락할 때만 발동!)
+        if (willDowngrade && buffs.blessing) {
           setBuffs(b => ({ ...b, blessing: false }));
           triggerEvent('blessingUsed');
-        } else {
-          const downgradeRoll = secureRandom();
-          if (downgradeRoll < downgradeRate && level > 0) {
-            const newLevel = Math.max(0, level - 1);
-            // 레벨 하락 시 스탯도 비례 감소
-            if (newLevel > 0) {
-              const ratio = newLevel / level;
-              setItemStats(prev => ({
-                attack: Math.floor(prev.attack * ratio),
-                hp: Math.floor(prev.hp * ratio),
-                speed: Math.floor((prev.speed || 0) * ratio)
-              }));
-            } else {
-              setItemStats({ attack: 0, hp: 0, speed: 0 });
-            }
-            setLevel(newLevel);
+          // 하락 방지됨 - 레벨 유지
+        } else if (willDowngrade) {
+          // 축복 없으면 하락
+          const newLevel = Math.max(0, level - 1);
+          // 레벨 하락 시 스탯도 비례 감소
+          if (newLevel > 0) {
+            const ratio = newLevel / level;
+            setItemStats(prev => ({
+              attack: Math.floor(prev.attack * ratio),
+              hp: Math.floor(prev.hp * ratio),
+              speed: Math.floor((prev.speed || 0) * ratio)
+            }));
+          } else {
+            setItemStats({ attack: 0, hp: 0, speed: 0 });
           }
+          setLevel(newLevel);
         }
+        // 하락 없는 단순 실패는 축복 소모 안함
         setStats((s) => ({ ...s, attempts: s.attempts + 1, failures: s.failures + 1 }));
         setResult('fail');
         playFail();

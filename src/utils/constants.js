@@ -118,7 +118,10 @@ export const MAX_LEVEL = 20;
 
 // 레벨별 아이템 이미지 (public/images/items/ 폴더에 저장)
 // 파일명: 0.png, 1.png, 2.png, ... 20.png
-export const getItemImage = (level) => {
+export const getItemImage = (level, isDestroyed = false) => {
   const base = import.meta.env.BASE_URL || '/';
+  if (isDestroyed) {
+    return `${base}images/items/destroy.png`;
+  }
   return `${base}images/items/${level}.png`;
 };

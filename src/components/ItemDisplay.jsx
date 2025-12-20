@@ -6,7 +6,7 @@ const ItemDisplay = ({ level, isEnhancing, result, isDestroyed }) => {
   const color = getLevelColor(level);
   const tier = getLevelTier(level);
   const [imageError, setImageError] = useState(false);
-  const itemImage = getItemImage(level);
+  const itemImage = getItemImage(level, isDestroyed);
 
   useEffect(() => {
     setImageError(false);
@@ -279,7 +279,6 @@ const ItemDisplay = ({ level, isEnhancing, result, isDestroyed }) => {
           animate={{
             scale: 1,
             opacity: 1,
-            filter: isDestroyed ? 'grayscale(1) brightness(0.3)' : 'brightness(1)',
           }}
           transition={{ duration: 0.3 }}
           className="item-image"
@@ -292,7 +291,7 @@ const ItemDisplay = ({ level, isEnhancing, result, isDestroyed }) => {
             position: 'relative',
           }}
         >
-          {!imageError && !isDestroyed ? (
+          {!imageError ? (
             <img
               src={itemImage}
               alt='item'
@@ -300,7 +299,7 @@ const ItemDisplay = ({ level, isEnhancing, result, isDestroyed }) => {
                 width: '100%',
                 height: '100%',
                 objectFit: 'contain',
-                filter: `drop-shadow(0 0 20px ${color}80)`,
+                filter: isDestroyed ? 'none' : `drop-shadow(0 0 20px ${color}80)`,
               }}
               onError={() => setImageError(true)}
             />

@@ -174,7 +174,7 @@ const LiveFeed = ({ isOpen, onToggle }) => {
                     <div style={styles.logLeft}>
                       <div style={styles.itemImageWrapper}>
                         <img
-                          src={getItemImage(log.result === 'destroyed' ? 0 : log.level)}
+                          src={getItemImage(log.level, log.result === 'destroyed')}
                           alt=""
                           style={styles.itemImage}
                         />
