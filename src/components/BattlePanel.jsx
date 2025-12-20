@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { formatGold, getLevelColor, getItemImage, getLevelTier } from '../utils/constants';
+import { formatGold, getLevelColor, getItemImage } from '../utils/constants';
 
 const BattlePanel = ({
   isOpen,
@@ -911,46 +911,6 @@ const styles = {
     fontWeight: 'bold',
     marginBottom: 16,
   },
-  matchedVersus: {
-    display: 'flex',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  matchedCard: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderRadius: 12,
-    padding: 12,
-    textAlign: 'center',
-    minWidth: 100,
-  },
-  matchedItemImg: {
-    width: 50,
-    height: 50,
-    objectFit: 'contain',
-    marginBottom: 8,
-  },
-  matchedAvatar: {
-    width: 50,
-    height: 50,
-    borderRadius: '50%',
-    objectFit: 'cover',
-    backgroundColor: '#333',
-    marginBottom: 8,
-  },
-  matchedStats: {
-    display: 'flex',
-    justifyContent: 'center',
-    gap: 8,
-    fontSize: 11,
-    color: '#aaa',
-    marginTop: 4,
-  },
-  matchedPower: {
-    fontSize: 10,
-    color: '#FFD700',
-    marginTop: 4,
-  },
   matchedVsText: {
     fontSize: 24,
     fontWeight: 'bold',
@@ -1059,25 +1019,6 @@ const styles = {
   },
   battleStats: {
     marginBottom: 16,
-  },
-  statRow: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 10,
-    marginBottom: 8,
-    color: '#fff',
-    fontSize: 12,
-  },
-  hpBar: {
-    flex: 1,
-    height: 12,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 6,
-    overflow: 'hidden',
-  },
-  hpFill: {
-    height: '100%',
-    transition: 'width 0.3s',
   },
   actionBtn: {
     flex: 1,

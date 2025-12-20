@@ -18,20 +18,6 @@ const secureRandom01 = () => {
   return array[0] / 4294967295;
 };
 
-// Rate limiter (연속 클릭 방지)
-const createRateLimiter = (minIntervalMs) => {
-  let lastAction = 0;
-  return () => {
-    const now = Date.now();
-    if (now - lastAction < minIntervalMs) {
-      return false; // 너무 빠른 연속 클릭
-    }
-    lastAction = now;
-    return true;
-  };
-};
-
-
 // 레벨별 스탯 배율 (고강일수록 급격히 증가)
 const getStatMultiplier = (level) => {
   if (level >= 18) return 5.0;   // 초월
