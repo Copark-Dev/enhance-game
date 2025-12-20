@@ -228,7 +228,7 @@ const LiveFeed = ({ isOpen, onToggle }) => {
 const styles = {
   toggleBtn: {
     position: 'fixed',
-    top: 70,
+    top: 78,
     right: 10,
     padding: '8px 14px',
     borderRadius: 20,
@@ -251,11 +251,11 @@ const styles = {
   },
   panel: {
     position: 'fixed',
-    top: 60,
+    top: 68,
     right: 0,
-    width: 280,
+    width: 300,
     maxWidth: '85vw',
-    height: 'calc(100vh - 140px)',
+    height: 'calc(100vh - 150px)',
     backgroundColor: 'rgba(15,15,30,0.98)',
     borderLeft: '1px solid #333',
     borderBottom: '1px solid #333',
@@ -264,6 +264,7 @@ const styles = {
     display: 'flex',
     flexDirection: 'column',
     boxShadow: '-4px 4px 20px rgba(0,0,0,0.5)',
+    overflow: 'hidden',
   },
   header: {
     display: 'flex',
@@ -295,7 +296,9 @@ const styles = {
   feedList: {
     flex: 1,
     overflowY: 'auto',
+    overflowX: 'hidden',
     padding: 8,
+    WebkitOverflowScrolling: 'touch',
   },
   empty: {
     color: '#666',
@@ -359,16 +362,17 @@ const styles = {
   },
   nickname: {
     color: '#fff',
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: 'bold',
     overflow: 'hidden',
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap',
-    maxWidth: 100,
+    maxWidth: 120,
   },
   tierName: {
-    fontSize: 10,
-    opacity: 0.8,
+    fontSize: 12,
+    opacity: 0.9,
+    fontWeight: '600',
   },
   result: {
     fontSize: 12,

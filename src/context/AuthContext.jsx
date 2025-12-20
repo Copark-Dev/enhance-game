@@ -723,6 +723,10 @@ export const AuthProvider = ({ children }) => {
   // 강화 로그 저장 (실시간 피드용)
   const saveEnhanceLog = async (level, result, previousLevel) => {
     if (!user) return;
+    // 10강 이상만 저장 (성공 시 결과 레벨, 파괴/실패 시 이전 레벨 기준)
+    const targetLevel = result === 'success' ? level : previousLevel;
+    if (targetLevel < 10) return;
+
     try {
       const logRef = doc(collection(db, 'enhanceLogs'));
       await setDoc(logRef, {

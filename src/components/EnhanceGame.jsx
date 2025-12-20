@@ -68,14 +68,14 @@ const EnhanceGame = () => {
       return;
     }
 
-    // 강화 중이 아닐 때만 다음 강화 시작
-    if (!isEnhancing) {
+    // 강화 중이 아니고, 결과도 없을 때만 다음 강화 시작
+    if (!isEnhancing && !result) {
       const timer = setTimeout(() => {
         enhance();
-      }, 300); // 강화 완료 후 0.3초 대기
+      }, 500); // 강화 완료 후 0.5초 대기
       return () => clearTimeout(timer);
     }
-  }, [isAutoEnhancing, isEnhancing, canEnhance, isDestroyed, level, enhance]);
+  }, [isAutoEnhancing, isEnhancing, result, canEnhance, isDestroyed, level, enhance]);
 
   // 파괴되면 오토 강화 중지
   useEffect(() => {
@@ -396,7 +396,6 @@ const EnhanceGame = () => {
           ) : (
             <>
               <div style={styles.buttonRow} className="button-row">
-                <EnhanceButton onClick={enhance} disabled={!canEnhance || isAutoEnhancing} isEnhancing={isEnhancing} isMax={level >= MAX_LEVEL} level={level} />
                 <motion.button
                   onClick={() => setIsAutoEnhancing(!isAutoEnhancing)}
                   disabled={!canEnhance && !isAutoEnhancing}
@@ -408,24 +407,25 @@ const EnhanceGame = () => {
                     opacity: !canEnhance && !isAutoEnhancing ? 0.4 : 1,
                     cursor: !canEnhance && !isAutoEnhancing ? 'not-allowed' : 'pointer'
                   }}>
-                  {isAutoEnhancing ? '⏹ 중지' : '🔄 연속'}
+                  {isAutoEnhancing ? '⏹' : '🔄'}
                 </motion.button>
+                <EnhanceButton onClick={enhance} disabled={!canEnhance || isAutoEnhancing} isEnhancing={isEnhancing} isMax={level >= MAX_LEVEL} level={level} />
               </div>
               <div style={styles.buttonRow} className="button-row">
-              <motion.button onClick={sell} disabled={isEnhancing || isAutoEnhancing || level === 0}
-                whileHover={!isEnhancing && !isAutoEnhancing && level > 0 ? { scale: 1.05 } : {}}
-                whileTap={!isEnhancing && !isAutoEnhancing && level > 0 ? { scale: 0.95 } : {}}
-                className="sell-btn"
-                style={{ ...styles.sellBtn, opacity: isEnhancing || isAutoEnhancing || level === 0 ? 0.4 : 1, cursor: isEnhancing || isAutoEnhancing || level === 0 ? 'not-allowed' : 'pointer' }}>
-                💰 판매
-              </motion.button>
-              <motion.button onClick={storeItem} disabled={isEnhancing || isAutoEnhancing || level === 0 || inventory.length >= 5}
-                whileHover={!isEnhancing && !isAutoEnhancing && level > 0 && inventory.length < 5 ? { scale: 1.05 } : {}}
-                whileTap={!isEnhancing && !isAutoEnhancing && level > 0 && inventory.length < 5 ? { scale: 0.95 } : {}}
-                className="store-btn"
-                style={{ ...styles.storeBtn, opacity: isEnhancing || isAutoEnhancing || level === 0 || inventory.length >= 5 ? 0.4 : 1, cursor: isEnhancing || isAutoEnhancing || level === 0 || inventory.length >= 5 ? 'not-allowed' : 'pointer' }}>
-                📦 보관
-              </motion.button>
+                <motion.button onClick={sell} disabled={isEnhancing || isAutoEnhancing || level === 0}
+                  whileHover={!isEnhancing && !isAutoEnhancing && level > 0 ? { scale: 1.05 } : {}}
+                  whileTap={!isEnhancing && !isAutoEnhancing && level > 0 ? { scale: 0.95 } : {}}
+                  className="sell-btn"
+                  style={{ ...styles.sellBtn, opacity: isEnhancing || isAutoEnhancing || level === 0 ? 0.4 : 1, cursor: isEnhancing || isAutoEnhancing || level === 0 ? 'not-allowed' : 'pointer' }}>
+                  💰 판매
+                </motion.button>
+                <motion.button onClick={storeItem} disabled={isEnhancing || isAutoEnhancing || level === 0 || inventory.length >= 5}
+                  whileHover={!isEnhancing && !isAutoEnhancing && level > 0 && inventory.length < 5 ? { scale: 1.05 } : {}}
+                  whileTap={!isEnhancing && !isAutoEnhancing && level > 0 && inventory.length < 5 ? { scale: 0.95 } : {}}
+                  className="store-btn"
+                  style={{ ...styles.storeBtn, opacity: isEnhancing || isAutoEnhancing || level === 0 || inventory.length >= 5 ? 0.4 : 1, cursor: isEnhancing || isAutoEnhancing || level === 0 || inventory.length >= 5 ? 'not-allowed' : 'pointer' }}>
+                  📦 보관
+                </motion.button>
               </div>
             </>
           )}
@@ -625,7 +625,7 @@ const styles = {
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingTop: 56,
+    paddingTop: 68,
     paddingBottom: 72,
     paddingLeft: 16,
     paddingRight: 16,
@@ -645,7 +645,8 @@ const styles = {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: '12px 16px',
+    padding: '16px 16px',
+    minHeight: 60,
     background: 'rgba(15,15,35,0.9)',
     backdropFilter: 'blur(20px)',
     borderBottom: '1px solid rgba(255,255,255,0.05)',
@@ -710,8 +711,8 @@ const styles = {
   priceSell: { color: '#4CAF50', fontWeight: '600' },
   statsRow: { display: 'flex', justifyContent: 'center', gap: 16, marginTop: 8, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,0.06)' },
   statLabel: { color: 'rgba(255,215,0,0.9)', fontSize: 13, fontWeight: '600' },
-  buttonArea: { marginTop: 8, width: '100%' },
-  buttonRow: { display: 'flex', gap: 10, justifyContent: 'center' },
+  buttonArea: { marginTop: 8, width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 },
+  buttonRow: { display: 'flex', gap: 10, justifyContent: 'center', alignItems: 'center' },
   resetBtn: {
     padding: '14px 40px',
     fontSize: 15,
@@ -724,34 +725,34 @@ const styles = {
     boxShadow: '0 4px 15px rgba(76,175,80,0.3)',
   },
   sellBtn: {
-    padding: '10px 16px',
-    fontSize: 13,
+    padding: '14px 28px',
+    fontSize: 15,
     fontWeight: '700',
     color: '#000',
     background: 'linear-gradient(135deg, #FFD700, #FFC107)',
     border: 'none',
-    borderRadius: 10,
+    borderRadius: 12,
     boxShadow: '0 4px 15px rgba(255,215,0,0.25)',
     whiteSpace: 'nowrap',
   },
   storeBtn: {
-    padding: '10px 14px',
-    fontSize: 13,
+    padding: '14px 24px',
+    fontSize: 15,
     fontWeight: '700',
     color: '#fff',
     background: 'linear-gradient(135deg, #7C4DFF, #651FFF)',
     border: 'none',
-    borderRadius: 10,
+    borderRadius: 12,
     boxShadow: '0 4px 15px rgba(124,77,255,0.25)',
     whiteSpace: 'nowrap',
   },
   autoBtn: {
-    padding: '14px 16px',
-    fontSize: 14,
+    padding: '12px 14px',
+    fontSize: 16,
     fontWeight: '700',
     color: '#fff',
     border: 'none',
-    borderRadius: 12,
+    borderRadius: 10,
     boxShadow: '0 4px 15px rgba(156,39,176,0.3)',
     whiteSpace: 'nowrap',
   },
@@ -816,19 +817,18 @@ const styles = {
   },
   eventNotification: {
     position: 'fixed',
-    top: 70,
-    left: '50%',
-    transform: 'translateX(-50%)',
-    padding: '10px 20px',
+    top: 76,
+    left: 16,
+    padding: '10px 16px',
     background: 'linear-gradient(135deg, #FFD700, #FFC107)',
     color: '#000',
-    borderRadius: 50,
-    fontSize: 14,
+    borderRadius: 12,
+    fontSize: 13,
     fontWeight: '700',
-    boxShadow: '0 8px 30px rgba(255,215,0,0.4)',
+    boxShadow: '0 4px 20px rgba(255,215,0,0.4)',
     zIndex: 1000,
     whiteSpace: 'nowrap',
-    maxWidth: '90%',
+    maxWidth: 'calc(100% - 150px)',
   },
   offlineOverlay: {
     position: 'fixed',
