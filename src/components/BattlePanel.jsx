@@ -20,6 +20,7 @@ const BattlePanel = ({
   const [battleLog, setBattleLog] = useState([]);
   const [tab, setTab] = useState('battle'); // 'battle' | 'history'
   const [battleHistory, setBattleHistory] = useState([]);
+  const [currentHp, setCurrentHp] = useState({ my: 0, opponent: 0, maxMy: 0, maxOpponent: 0 });
 
   useEffect(() => {
     if (isOpen) {
@@ -80,10 +81,16 @@ const BattlePanel = ({
     return Math.min(5 + level * 2, 50);
   };
 
-  // 회피 확률 (HP 높을수록 증가)
+  // 회피 확률 (HP + Speed 기반)
   const getDodgeChance = (item) => {
     const hp = item?.hp || 0;
-    return Math.min(hp / 50, 25);
+    const speed = item?.speed || 0;
+    return Math.min((hp / 80) + (speed / 20), 35);
+  };
+
+  // 속도 계산 (선공권 및 연속공격)
+  const calculateSpeed = (item) => {
+    return item?.speed || 0;
   };
 
   // 랜덤 매칭
@@ -127,6 +134,14 @@ const BattlePanel = ({
     let opponentHp = calculateMaxHp(opponentItem);
     const maxMyHp = myHp;
     const maxOpponentHp = opponentHp;
+
+    // 실시간 HP 초기화
+    setCurrentHp({ my: myHp, opponent: opponentHp, maxMy: maxMyHp, maxOpponent: maxOpponentHp });
+
+    // 속도 기반 선공권 결정
+    const mySpeed = calculateSpeed(myItem);
+    const opponentSpeed = calculateSpeed(opponentItem);
+    const iGoFirst = mySpeed >= opponentSpeed;
 
     const myAttack = calculateAttack(myItem);
     const opponentAttack = calculateAttack(opponentItem);
@@ -217,8 +232,13 @@ const BattlePanel = ({
 
       await new Promise(resolve => setTimeout(resolve, 200));
       setBattleLog([...logs]);
+      setCurrentHp({ my: Math.max(0, myHp), opponent: Math.max(0, opponentHp), maxMy: maxMyHp, maxOpponent: maxOpponentHp });
 
       if (myHp <= 0 || opponentHp <= 0) break;
+
+      // 선공권에 따른 턴 순서
+      const firstAttacker = iGoFirst ? 'me' : 'opponent';
+      const secondAttacker = iGoFirst ? 'opponent' : 'me';
 
       // 내 턴 (스턴되지 않았다면)
       if (!myStunned) {
@@ -236,6 +256,14 @@ const BattlePanel = ({
         if (result.effect === 'stun') {
           opponentStunned = true;
         }
+
+        // 속도 기반 연속 공격 (속도 50당 5% 확률, 최대 25%)
+        const doubleAttackChance = Math.min(mySpeed / 10, 25);
+        if (secureRandom() * 100 < doubleAttackChance && opponentHp > 0) {
+          const extraResult = processAttack('me', myItem, opponentItem, opponentHp, myAttack * 0.7);
+          logs.push({ round, attacker: 'me', action: 'swift', damage: extraResult.damage });
+          opponentHp -= extraResult.damage;
+        }
       } else {
         logs.push({ round, attacker: 'me', action: 'stunned', damage: 0 });
         myStunned = false;
@@ -243,6 +271,7 @@ const BattlePanel = ({
 
       await new Promise(resolve => setTimeout(resolve, 250));
       setBattleLog([...logs]);
+      setCurrentHp({ my: Math.max(0, myHp), opponent: Math.max(0, opponentHp), maxMy: maxMyHp, maxOpponent: maxOpponentHp });
 
       if (opponentHp <= 0) break;
 
@@ -263,6 +292,14 @@ const BattlePanel = ({
           myStunned = true;
         }
 
+        // 속도 기반 연속 공격
+        const opponentDoubleChance = Math.min(opponentSpeed / 10, 25);
+        if (secureRandom() * 100 < opponentDoubleChance && myHp > 0) {
+          const extraResult = processAttack('opponent', opponentItem, myItem, myHp, opponentAttack * 0.7);
+          logs.push({ round, attacker: 'opponent', action: 'swift', damage: extraResult.damage });
+          myHp -= extraResult.damage;
+        }
+
         // 반격 (8% 확률)
         if (result.action !== 'dodged' && secureRandom() < 0.08 && myHp > 0) {
           const counterDmg = Math.floor(myAttack * 0.5);
@@ -276,6 +313,7 @@ const BattlePanel = ({
 
       await new Promise(resolve => setTimeout(resolve, 250));
       setBattleLog([...logs]);
+      setCurrentHp({ my: Math.max(0, myHp), opponent: Math.max(0, opponentHp), maxMy: maxMyHp, maxOpponent: maxOpponentHp });
     }
 
     const won = myHp > opponentHp;
@@ -286,6 +324,7 @@ const BattlePanel = ({
       myLevel: myItem.level,
       myAttack: myItem.attack,
       myHp: myItem.hp,
+      mySpeed: myItem.speed || 0,
       opponentLevel: opponentItem.level,
       opponentName: matchedOpponent.nickname,
       opponentId: matchedOpponent.id,
@@ -453,6 +492,36 @@ const BattlePanel = ({
                 </div>
               ) : isBattling ? (
                 <div style={styles.battleScene}>
+                  {/* 실시간 HP 바 */}
+                  <div style={styles.liveHpSection}>
+                    <div style={styles.liveHpRow}>
+                      <span style={{ color: '#4CAF50', fontSize: 11 }}>나</span>
+                      <div style={styles.liveHpBar}>
+                        <motion.div
+                          animate={{ width: `${(currentHp.my / currentHp.maxMy) * 100}%` }}
+                          transition={{ duration: 0.3 }}
+                          style={{ ...styles.liveHpFill, backgroundColor: currentHp.my / currentHp.maxMy > 0.3 ? '#4CAF50' : '#FF5722' }}
+                        />
+                      </div>
+                      <span style={{ color: '#4CAF50', fontSize: 10, minWidth: 70, textAlign: 'right' }}>
+                        {currentHp.my}/{currentHp.maxMy}
+                      </span>
+                    </div>
+                    <div style={styles.liveHpRow}>
+                      <span style={{ color: '#F44336', fontSize: 11 }}>적</span>
+                      <div style={styles.liveHpBar}>
+                        <motion.div
+                          animate={{ width: `${(currentHp.opponent / currentHp.maxOpponent) * 100}%` }}
+                          transition={{ duration: 0.3 }}
+                          style={{ ...styles.liveHpFill, backgroundColor: currentHp.opponent / currentHp.maxOpponent > 0.3 ? '#F44336' : '#FF5722' }}
+                        />
+                      </div>
+                      <span style={{ color: '#F44336', fontSize: 10, minWidth: 70, textAlign: 'right' }}>
+                        {currentHp.opponent}/{currentHp.maxOpponent}
+                      </span>
+                    </div>
+                  </div>
+
                   <div style={styles.fighters}>
                     <div style={styles.fighter}>
                       <img src={getItemImage(selectedItem?.level || 0)} alt="" style={styles.fighterImg} />
@@ -460,7 +529,7 @@ const BattlePanel = ({
                         +{selectedItem?.level} {getLevelTier(selectedItem?.level)}
                       </div>
                       <div style={styles.itemStatsSmall}>
-                        ⚔️{selectedItem?.attack} ❤️{selectedItem?.hp}
+                        ⚔️{selectedItem?.attack} 💨{selectedItem?.speed || 0}
                       </div>
                     </div>
                     <div style={styles.vs}>VS</div>
@@ -470,7 +539,7 @@ const BattlePanel = ({
                         +{matchedOpponent?.battleItem?.level} {getLevelTier(matchedOpponent?.battleItem?.level)}
                       </div>
                       <div style={styles.itemStatsSmall}>
-                        ⚔️{matchedOpponent?.battleItem?.attack} ❤️{matchedOpponent?.battleItem?.hp}
+                        ⚔️{matchedOpponent?.battleItem?.attack} 💨{matchedOpponent?.battleItem?.speed || 0}
                       </div>
                     </div>
                   </div>
@@ -503,6 +572,7 @@ const BattlePanel = ({
                             {log.action === 'counter' && ` ↩️반격! -${log.damage}`}
                             {log.action === 'heal' && ` 💚회복! +${log.damage}`}
                             {log.action === 'stunned' && ' 💫기절 상태!'}
+                            {log.action === 'swift' && ` 💨연속공격! -${log.damage}`}
                           </>
                         )}
                       </motion.div>
@@ -532,7 +602,10 @@ const BattlePanel = ({
                       </div>
                       <div style={styles.matchedStats}>
                         <span>⚔️ {selectedItem?.attack}</span>
-                        <span>❤️ {selectedItem?.hp}</span>
+                        <span>💨 {selectedItem?.speed || 0}</span>
+                      </div>
+                      <div style={styles.matchedStats}>
+                        <span>❤️ {calculateMaxHp(selectedItem)}</span>
                       </div>
                       <div style={styles.matchedPower}>
                         전투력: {calculatePower(selectedItem)}
@@ -554,7 +627,10 @@ const BattlePanel = ({
                       </div>
                       <div style={styles.matchedStats}>
                         <span>⚔️ {matchedOpponent.battleItem?.attack}</span>
-                        <span>❤️ {matchedOpponent.battleItem?.hp}</span>
+                        <span>💨 {matchedOpponent.battleItem?.speed || 0}</span>
+                      </div>
+                      <div style={styles.matchedStats}>
+                        <span>❤️ {calculateMaxHp(matchedOpponent.battleItem)}</span>
                       </div>
                       <div style={styles.matchedPower}>
                         전투력: {calculatePower(matchedOpponent.battleItem)}
@@ -584,9 +660,9 @@ const BattlePanel = ({
               ) : (
                 <>
                   <div style={styles.section}>
-                    <div style={styles.sectionTitle}>내 아이템 선택</div>
+                    <div style={styles.sectionTitle}>내 영웅 선택</div>
                     {battleItems.length === 0 ? (
-                      <div style={styles.empty}>강화된 아이템이 없습니다. 먼저 아이템을 강화하세요!</div>
+                      <div style={styles.empty}>강화된 영웅이 없습니다. 먼저 영웅을 강화하세요!</div>
                     ) : (
                       <div style={styles.itemGrid}>
                         {battleItems.map((item) => (
@@ -607,10 +683,10 @@ const BattlePanel = ({
                               +{item.level}
                             </div>
                             <div style={{ fontSize: 9, color: '#888' }}>
-                              ⚔️{item.attack} ❤️{item.hp}
+                              ⚔️{item.attack} 💨{item.speed || 0}
                             </div>
-                            <div style={{ fontSize: 10, color: '#aaa' }}>
-                              전투력: {calculatePower(item)}
+                            <div style={{ fontSize: 9, color: '#F44336' }}>
+                              ❤️{calculateMaxHp(item)}
                             </div>
                           </motion.div>
                         ))}
@@ -658,7 +734,7 @@ const BattlePanel = ({
                       vs {battle.opponentName} (+{battle.opponentLevel})
                     </div>
                     <div style={{ color: '#888', fontSize: 11, marginTop: 2 }}>
-                      내 아이템: +{battle.myLevel} (⚔️{battle.myAttack || '-'} ❤️{battle.myHp || '-'}) | {battle.rounds}라운드
+                      내 영웅: +{battle.myLevel} (⚔️{battle.myAttack || '-'} 💨{battle.mySpeed || '-'}) | {battle.rounds}라운드
                       {battle.won && <span style={{ color: '#FFD700' }}> | +{formatGold(battle.reward)}G</span>}
                     </div>
                   </div>
@@ -890,6 +966,29 @@ const styles = {
   },
   battleScene: {
     padding: 20,
+  },
+  liveHpSection: {
+    marginBottom: 16,
+    padding: 12,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    borderRadius: 12,
+  },
+  liveHpRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
+  },
+  liveHpBar: {
+    flex: 1,
+    height: 16,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  liveHpFill: {
+    height: '100%',
+    borderRadius: 8,
   },
   fighters: {
     display: 'flex',

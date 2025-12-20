@@ -355,6 +355,7 @@ const EnhanceGame = () => {
             <div style={styles.statsRow}>
               <span style={styles.statLabel}>⚔️ {itemStats.attack}</span>
               <span style={styles.statLabel}>❤️ {500 + itemStats.hp * 5}</span>
+              <span style={styles.statLabel}>💨 {itemStats.speed || 0}</span>
             </div>
           )}
         </div>
@@ -412,7 +413,7 @@ const EnhanceGame = () => {
                   {hasItem ? (
                     <>
                       <span style={{ color, fontWeight: 'bold', fontSize: 14 }}>+{itemLevel}</span>
-                      <span style={{ color: '#888', fontSize: 8 }}>⚔️{item.attack || 0}</span>
+                      <span style={{ color: '#888', fontSize: 8 }}>⚔️{item.attack || 0} 💨{item.speed || 0}</span>
                     </>
                   ) : (
                     <span style={{ color: '#444', fontSize: 18 }}>-</span>
@@ -469,9 +470,10 @@ const EnhanceGame = () => {
           id: idx,
           level: item.level || item,
           attack: item.attack || 0,
-          hp: item.hp || 0
+          hp: item.hp || 0,
+          speed: item.speed || 0
         }))}
-        currentItem={{ level, attack: itemStats.attack, hp: itemStats.hp }}
+        currentItem={{ level, attack: itemStats.attack, hp: itemStats.hp, speed: itemStats.speed || 0 }}
         getRandomOpponents={getRandomOpponents}
         saveBattleNotification={saveBattleNotification}
         onBattle={(result) => {

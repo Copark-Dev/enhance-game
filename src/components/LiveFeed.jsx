@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { db } from '../utils/firebase';
-import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
-import { getLevelColor } from '../utils/constants';
+import { collection, query, orderBy, limit, onSnapshot, where } from 'firebase/firestore';
+import { getLevelColor, getLevelTier, getItemImage } from '../utils/constants';
 
 const LiveFeed = ({ isOpen, onToggle }) => {
   const [logs, setLogs] = useState([]);
@@ -10,9 +10,15 @@ const LiveFeed = ({ isOpen, onToggle }) => {
   const feedRef = useRef(null);
 
   useEffect(() => {
-    // 실시간 리스너 설정
+    // 실시간 리스너 설정 - 10강 이상만 필터링
     const logsRef = collection(db, 'enhanceLogs');
-    const q = query(logsRef, orderBy('timestamp', 'desc'), limit(30));
+    const q = query(
+      logsRef,
+      where('level', '>=', 10),
+      orderBy('level', 'desc'),
+      orderBy('timestamp', 'desc'),
+      limit(30)
+    );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const newLogs = [];
@@ -27,6 +33,9 @@ const LiveFeed = ({ isOpen, onToggle }) => {
       snapshot.forEach((doc) => {
         newLogs.push({ id: doc.id, ...doc.data() });
       });
+
+      // timestamp 기준으로 재정렬
+      newLogs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
       setLogs(newLogs);
       setNewLogIds(newIds);
@@ -140,15 +149,28 @@ const LiveFeed = ({ isOpen, onToggle }) => {
                     }}
                   >
                     <div style={styles.logLeft}>
-                      {log.profileImage ? (
-                        <img src={log.profileImage} alt="" style={styles.avatar} />
-                      ) : (
-                        <div style={styles.avatarPlaceholder}>
-                          {log.nickname?.charAt(0) || '?'}
-                        </div>
-                      )}
+                      <div style={styles.itemImageWrapper}>
+                        <img
+                          src={getItemImage(log.result === 'destroyed' ? 0 : log.level)}
+                          alt=""
+                          style={styles.itemImage}
+                        />
+                        {log.result !== 'destroyed' && (
+                          <span style={{
+                            ...styles.itemLevel,
+                            color: getLevelColor(log.level),
+                          }}>
+                            +{log.level}
+                          </span>
+                        )}
+                      </div>
                       <div style={styles.logInfo}>
-                        <span style={styles.nickname}>{log.nickname}</span>
+                        <div style={styles.nicknameRow}>
+                          {log.profileImage ? (
+                            <img src={log.profileImage} alt="" style={styles.miniAvatar} />
+                          ) : null}
+                          <span style={styles.nickname}>{log.nickname}</span>
+                        </div>
                         <span style={{
                           ...styles.result,
                           color: log.result === 'destroyed'
@@ -158,6 +180,12 @@ const LiveFeed = ({ isOpen, onToggle }) => {
                             : '#888'
                         }}>
                           {getResultEmoji(log.result, log.level)} {getResultText(log.result, log.level, log.previousLevel)}
+                        </span>
+                        <span style={{
+                          ...styles.tierName,
+                          color: getLevelColor(log.result === 'destroyed' ? 0 : log.level),
+                        }}>
+                          {getLevelTier(log.result === 'destroyed' ? 0 : log.level)}
                         </span>
                       </div>
                     </div>
@@ -265,33 +293,54 @@ const styles = {
     alignItems: 'center',
     gap: 10,
   },
-  avatar: {
-    width: 32,
-    height: 32,
+  itemImageWrapper: {
+    position: 'relative',
+    width: 40,
+    height: 40,
+    flexShrink: 0,
+  },
+  itemImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    border: '1px solid #444',
+    objectFit: 'cover',
+  },
+  itemLevel: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    fontSize: 9,
+    fontWeight: 'bold',
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    padding: '1px 4px',
+    borderRadius: 4,
+  },
+  miniAvatar: {
+    width: 16,
+    height: 16,
     borderRadius: '50%',
     border: '1px solid #444',
   },
-  avatarPlaceholder: {
-    width: 32,
-    height: 32,
-    borderRadius: '50%',
-    backgroundColor: '#333',
+  nicknameRow: {
     display: 'flex',
     alignItems: 'center',
-    justifyContent: 'center',
-    color: '#888',
-    fontSize: 14,
-    fontWeight: 'bold',
+    gap: 4,
   },
   logInfo: {
     display: 'flex',
     flexDirection: 'column',
     gap: 2,
+    minWidth: 0,
   },
   nickname: {
     color: '#fff',
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: 'bold',
+  },
+  tierName: {
+    fontSize: 10,
+    opacity: 0.8,
   },
   result: {
     fontSize: 12,

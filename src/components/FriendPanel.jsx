@@ -247,7 +247,7 @@ const FriendPanel = ({ isOpen, onClose, onGoldChange }) => {
                                 <span style={{ color: getLevelColor(item.level || item) }}>
                                   +{item.level || item}
                                 </span>
-                                {item.attack && <span style={{fontSize: 9, color: '#aaa'}}>⚔️{item.attack}</span>}
+                                {item.attack && <span style={{fontSize: 9, color: '#aaa'}}>⚔️{item.attack} 💨{item.speed || 0}</span>}
                               </div>
                             ))}
                           </div>

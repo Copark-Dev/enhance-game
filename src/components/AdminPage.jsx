@@ -301,7 +301,7 @@ const AdminPage = () => {
       {activeTab === 'images' && (
         <>
           <div style={styles.statsBar}>
-            <span>📷 레벨별 아이템 이미지 (읽기 전용)</span>
+            <span>📷 레벨별 영웅 이미지 (읽기 전용)</span>
           </div>
 
           <div style={styles.grid}>

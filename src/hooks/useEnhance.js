@@ -34,36 +34,41 @@ const createRateLimiter = (minIntervalMs) => {
 // Rate limiter 인스턴스 (노가다 버튼용 - 100ms 간격)
 const grindLimiter = createRateLimiter(100);
 
-// 아이템 스탯 생성 (레벨 기반 + 랜덤)
+// 아이템 스탯 생성 (레벨 기반 + 랜덤) - 속도 추가
 const generateItemStats = (level, previousStats = null) => {
   // 레벨별 기본 스탯 범위
   const baseAttack = level * 50;
   const baseHp = level * 100;
+  const baseSpeed = level * 15; // 속도 추가
 
   // 랜덤 보너스 (레벨이 높을수록 범위 넓어짐)
   const attackVariation = level * 10;
   const hpVariation = level * 20;
+  const speedVariation = level * 8;
 
   // 기존 스탯이 있으면 보존하고 추가
   if (previousStats) {
     const attackBonus = baseAttack / level + Math.floor(secureRandom01() * attackVariation);
     const hpBonus = baseHp / level + Math.floor(secureRandom01() * hpVariation);
+    const speedBonus = baseSpeed / level + Math.floor(secureRandom01() * speedVariation);
     return {
       attack: previousStats.attack + Math.floor(attackBonus),
-      hp: previousStats.hp + Math.floor(hpBonus)
+      hp: previousStats.hp + Math.floor(hpBonus),
+      speed: (previousStats.speed || 0) + Math.floor(speedBonus)
     };
   }
 
   // 신규 아이템 스탯
   return {
     attack: baseAttack + Math.floor(secureRandom01() * attackVariation * 2) - attackVariation,
-    hp: baseHp + Math.floor(secureRandom01() * hpVariation * 2) - hpVariation
+    hp: baseHp + Math.floor(secureRandom01() * hpVariation * 2) - hpVariation,
+    speed: baseSpeed + Math.floor(secureRandom01() * speedVariation * 2) - speedVariation
   };
 };
 
 export const useEnhance = (initialLevel = 0, initialGold = 50000) => {
   const [level, setLevel] = useState(initialLevel);
-  const [itemStats, setItemStats] = useState({ attack: 0, hp: 0 }); // 현재 아이템 스탯
+  const [itemStats, setItemStats] = useState({ attack: 0, hp: 0, speed: 0 }); // 현재 아이템 스탯
   const [gold, setGold] = useState(initialGold);
   const [isEnhancing, setIsEnhancing] = useState(false);
   const [result, setResult] = useState(null);
@@ -246,10 +251,11 @@ export const useEnhance = (initialLevel = 0, initialGold = 50000) => {
               const ratio = newLevel / level;
               setItemStats(prev => ({
                 attack: Math.floor(prev.attack * ratio),
-                hp: Math.floor(prev.hp * ratio)
+                hp: Math.floor(prev.hp * ratio),
+                speed: Math.floor((prev.speed || 0) * ratio)
               }));
             } else {
-              setItemStats({ attack: 0, hp: 0 });
+              setItemStats({ attack: 0, hp: 0, speed: 0 });
             }
             setLevel(newLevel);
           }
@@ -285,7 +291,7 @@ export const useEnhance = (initialLevel = 0, initialGold = 50000) => {
     setLastSellPrice(finalPrice);
     setStats((s) => ({ ...s, totalEarned: s.totalEarned + finalPrice }));
     setLevel(0);
-    setItemStats({ attack: 0, hp: 0 }); // 스탯 초기화
+    setItemStats({ attack: 0, hp: 0, speed: 0 }); // 스탯 초기화
     setResult('sold');
     playSell();
 
@@ -300,7 +306,7 @@ export const useEnhance = (initialLevel = 0, initialGold = 50000) => {
 
   const reset = useCallback(() => {
     setLevel(0);
-    setItemStats({ attack: 0, hp: 0 }); // 스탯 초기화
+    setItemStats({ attack: 0, hp: 0, speed: 0 }); // 스탯 초기화
     setIsDestroyed(false);
     setResult(null);
     setLastSellPrice(null);
@@ -323,10 +329,10 @@ export const useEnhance = (initialLevel = 0, initialGold = 50000) => {
   const storeItem = useCallback(() => {
     if (isEnhancing || isDestroyed || level === 0) return false;
     if (inventory.length >= 5) return false;
-    // 레벨과 스탯을 함께 저장
-    setInventory((inv) => [...inv, { level, attack: itemStats.attack, hp: itemStats.hp }]);
+    // 레벨과 스탯을 함께 저장 (속도 포함)
+    setInventory((inv) => [...inv, { level, attack: itemStats.attack, hp: itemStats.hp, speed: itemStats.speed || 0 }]);
     setLevel(0);
-    setItemStats({ attack: 0, hp: 0 });
+    setItemStats({ attack: 0, hp: 0, speed: 0 });
     return true;
   }, [level, itemStats, isEnhancing, isDestroyed, inventory.length]);
 
@@ -338,7 +344,7 @@ export const useEnhance = (initialLevel = 0, initialGold = 50000) => {
       const newInv = [...inv];
       if (level > 0) {
         // 현재 아이템을 보관함에 저장
-        newInv[index] = { level, attack: itemStats.attack, hp: itemStats.hp };
+        newInv[index] = { level, attack: itemStats.attack, hp: itemStats.hp, speed: itemStats.speed || 0 };
       } else {
         newInv.splice(index, 1);
       }
@@ -348,7 +354,8 @@ export const useEnhance = (initialLevel = 0, initialGold = 50000) => {
     setLevel(storedItem.level || storedItem); // 이전 형식 호환
     setItemStats({
       attack: storedItem.attack || 0,
-      hp: storedItem.hp || 0
+      hp: storedItem.hp || 0,
+      speed: storedItem.speed || 0
     });
     return true;
   }, [level, itemStats, isEnhancing, isDestroyed, inventory]);
