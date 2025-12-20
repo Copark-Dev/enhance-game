@@ -360,6 +360,6 @@ export const useEnhance = (initialLevel = 0, initialGold = 50000) => {
     buffs, activeEvent, eventMultiplier, failStreak, lastRoll,
     itemStats, // 현재 아이템 스탯
     canEnhance, enhance, sell, reset, addGold, setResult,
-    setGold, setStats, setLevel, setInventory, setBuffs, setItemStats, storeItem, takeItem
+    setGold, setStats, setLevel, setInventory, setBuffs, setItemStats, setIsDestroyed, storeItem, takeItem
   };
 };

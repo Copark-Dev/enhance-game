@@ -37,7 +37,7 @@ const EnhanceGame = () => {
     successRate, downgradeRate, destroyRate, enhanceCost, inventory,
     buffs, activeEvent, eventMultiplier, lastRoll, itemStats,
     canEnhance, enhance, sell, reset, addGold, setResult, setGold, setStats,
-    setLevel, setInventory, setBuffs, setItemStats, storeItem, takeItem
+    setLevel, setInventory, setBuffs, setItemStats, setIsDestroyed, storeItem, takeItem
   } = useEnhance(0, user?.gold || 50000);
 
   const [showMobileStats, setShowMobileStats] = useState(false);
@@ -66,6 +66,7 @@ const EnhanceGame = () => {
       if (user.inventory) setInventory(user.inventory);
       if (user.buffs) setBuffs(user.buffs);
       if (user.itemStats) setItemStats(user.itemStats);
+      if (user.isDestroyed) setIsDestroyed(true);
     }
   }, [user]);
 
@@ -151,11 +152,11 @@ const EnhanceGame = () => {
   useEffect(() => {
     if (user && !isEnhancing) {
       const saveTimeout = setTimeout(() => {
-        updateUserData({ gold, stats, level, inventory, buffs, itemStats });
+        updateUserData({ gold, stats, level, inventory, buffs, itemStats, isDestroyed });
       }, 1000);
       return () => clearTimeout(saveTimeout);
     }
-  }, [gold, stats, level, inventory, buffs, itemStats, isEnhancing]);
+  }, [gold, stats, level, inventory, buffs, itemStats, isDestroyed, isEnhancing]);
 
   // 이벤트 메시지
   const eventMessages = {
