@@ -55,7 +55,34 @@ const EnhanceGame = () => {
   const [giftNotifications, setGiftNotifications] = useState([]);
   const [showLiveFeed, setShowLiveFeed] = useState(false);
   const [previousLevel, setPreviousLevel] = useState(0);
+  const [isAutoEnhancing, setIsAutoEnhancing] = useState(false);
   const sellRange = SELL_PRICE[level] || { min: 0, max: 0 };
+
+  // 연속 강화 (오토 강화)
+  useEffect(() => {
+    if (!isAutoEnhancing) return;
+
+    // 강화 불가능하면 자동으로 중지
+    if (!canEnhance || isDestroyed || level >= MAX_LEVEL) {
+      setIsAutoEnhancing(false);
+      return;
+    }
+
+    // 강화 중이 아닐 때만 다음 강화 시작
+    if (!isEnhancing) {
+      const timer = setTimeout(() => {
+        enhance();
+      }, 300); // 강화 완료 후 0.3초 대기
+      return () => clearTimeout(timer);
+    }
+  }, [isAutoEnhancing, isEnhancing, canEnhance, isDestroyed, level, enhance]);
+
+  // 파괴되면 오토 강화 중지
+  useEffect(() => {
+    if (isDestroyed) {
+      setIsAutoEnhancing(false);
+    }
+  }, [isDestroyed]);
 
   // 유저 데이터로 초기화
   useEffect(() => {
@@ -367,23 +394,40 @@ const EnhanceGame = () => {
           {isDestroyed ? (
             <motion.button onClick={reset} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} style={styles.resetBtn}>🔄 다시 시작</motion.button>
           ) : (
-            <div style={styles.buttonRow} className="button-row">
-              <EnhanceButton onClick={enhance} disabled={!canEnhance} isEnhancing={isEnhancing} isMax={level >= MAX_LEVEL} level={level} />
-              <motion.button onClick={sell} disabled={isEnhancing || level === 0}
-                whileHover={!isEnhancing && level > 0 ? { scale: 1.05 } : {}}
-                whileTap={!isEnhancing && level > 0 ? { scale: 0.95 } : {}}
+            <>
+              <div style={styles.buttonRow} className="button-row">
+                <EnhanceButton onClick={enhance} disabled={!canEnhance || isAutoEnhancing} isEnhancing={isEnhancing} isMax={level >= MAX_LEVEL} level={level} />
+                <motion.button
+                  onClick={() => setIsAutoEnhancing(!isAutoEnhancing)}
+                  disabled={!canEnhance && !isAutoEnhancing}
+                  whileHover={canEnhance || isAutoEnhancing ? { scale: 1.05 } : {}}
+                  whileTap={canEnhance || isAutoEnhancing ? { scale: 0.95 } : {}}
+                  style={{
+                    ...styles.autoBtn,
+                    backgroundColor: isAutoEnhancing ? '#F44336' : '#9C27B0',
+                    opacity: !canEnhance && !isAutoEnhancing ? 0.4 : 1,
+                    cursor: !canEnhance && !isAutoEnhancing ? 'not-allowed' : 'pointer'
+                  }}>
+                  {isAutoEnhancing ? '⏹ 중지' : '🔄 연속'}
+                </motion.button>
+              </div>
+              <div style={styles.buttonRow} className="button-row">
+              <motion.button onClick={sell} disabled={isEnhancing || isAutoEnhancing || level === 0}
+                whileHover={!isEnhancing && !isAutoEnhancing && level > 0 ? { scale: 1.05 } : {}}
+                whileTap={!isEnhancing && !isAutoEnhancing && level > 0 ? { scale: 0.95 } : {}}
                 className="sell-btn"
-                style={{ ...styles.sellBtn, opacity: isEnhancing || level === 0 ? 0.4 : 1, cursor: isEnhancing || level === 0 ? 'not-allowed' : 'pointer' }}>
+                style={{ ...styles.sellBtn, opacity: isEnhancing || isAutoEnhancing || level === 0 ? 0.4 : 1, cursor: isEnhancing || isAutoEnhancing || level === 0 ? 'not-allowed' : 'pointer' }}>
                 💰 판매
               </motion.button>
-              <motion.button onClick={storeItem} disabled={isEnhancing || level === 0 || inventory.length >= 5}
-                whileHover={!isEnhancing && level > 0 && inventory.length < 5 ? { scale: 1.05 } : {}}
-                whileTap={!isEnhancing && level > 0 && inventory.length < 5 ? { scale: 0.95 } : {}}
+              <motion.button onClick={storeItem} disabled={isEnhancing || isAutoEnhancing || level === 0 || inventory.length >= 5}
+                whileHover={!isEnhancing && !isAutoEnhancing && level > 0 && inventory.length < 5 ? { scale: 1.05 } : {}}
+                whileTap={!isEnhancing && !isAutoEnhancing && level > 0 && inventory.length < 5 ? { scale: 0.95 } : {}}
                 className="store-btn"
-                style={{ ...styles.storeBtn, opacity: isEnhancing || level === 0 || inventory.length >= 5 ? 0.4 : 1, cursor: isEnhancing || level === 0 || inventory.length >= 5 ? 'not-allowed' : 'pointer' }}>
+                style={{ ...styles.storeBtn, opacity: isEnhancing || isAutoEnhancing || level === 0 || inventory.length >= 5 ? 0.4 : 1, cursor: isEnhancing || isAutoEnhancing || level === 0 || inventory.length >= 5 ? 'not-allowed' : 'pointer' }}>
                 📦 보관
               </motion.button>
-            </div>
+              </div>
+            </>
           )}
         </div>
 
@@ -699,6 +743,16 @@ const styles = {
     border: 'none',
     borderRadius: 10,
     boxShadow: '0 4px 15px rgba(124,77,255,0.25)',
+    whiteSpace: 'nowrap',
+  },
+  autoBtn: {
+    padding: '14px 16px',
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#fff',
+    border: 'none',
+    borderRadius: 12,
+    boxShadow: '0 4px 15px rgba(156,39,176,0.3)',
     whiteSpace: 'nowrap',
   },
   warning: {

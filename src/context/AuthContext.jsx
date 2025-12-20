@@ -524,20 +524,50 @@ export const AuthProvider = ({ children }) => {
       querySnapshot.forEach((docSnap) => {
         if (docSnap.id !== user.id) {
           const data = docSnap.data();
-          // 배틀 가능한 아이템이 있는 유저만 (maxLevel > 0)
-          if (data.stats?.maxLevel > 0) {
-            users.push({
-              id: docSnap.id,
-              nickname: data.nickname || '익명',
-              profileImage: data.profileImage,
-              stats: data.stats,
-              // 배틀용 아이템 정보 (최고 레벨 기반으로 추정)
-              battleItem: {
-                level: data.stats?.maxLevel || 0,
-                attack: (data.stats?.maxLevel || 0) * 50,
-                hp: (data.stats?.maxLevel || 0) * 100
-              }
-            });
+          // 배틀 가능한 유저만 (현재 아이템이나 보관함에 영웅이 있는 경우)
+          const hasCurrentItem = data.level > 0 && !data.isDestroyed;
+          const hasInventory = data.inventory && data.inventory.length > 0;
+
+          if (hasCurrentItem || hasInventory) {
+            // 상대의 실제 팀 구성
+            const team = [];
+
+            // 현재 아이템 추가
+            if (hasCurrentItem) {
+              team.push({
+                id: 'current',
+                level: data.level,
+                attack: data.itemStats?.attack || data.level * 50,
+                hp: data.itemStats?.hp || data.level * 80,
+                speed: data.itemStats?.speed || 0
+              });
+            }
+
+            // 보관함 아이템 추가
+            if (data.inventory) {
+              data.inventory.forEach((item, idx) => {
+                const itemLevel = item?.level || item || 0;
+                if (itemLevel > 0) {
+                  team.push({
+                    id: `inv-${idx}`,
+                    level: itemLevel,
+                    attack: item?.attack || itemLevel * 50,
+                    hp: item?.hp || itemLevel * 80,
+                    speed: item?.speed || 0
+                  });
+                }
+              });
+            }
+
+            if (team.length > 0) {
+              users.push({
+                id: docSnap.id,
+                nickname: data.nickname || '익명',
+                profileImage: data.profileImage,
+                stats: data.stats,
+                team: team.sort((a, b) => b.level - a.level) // 레벨 높은 순 정렬
+              });
+            }
           }
         }
       });

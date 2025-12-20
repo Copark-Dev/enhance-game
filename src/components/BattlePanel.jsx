@@ -101,23 +101,6 @@ const BattlePanel = ({
   };
 
 
-  // 상대 팀 생성 (랜덤 생성)
-  const generateOpponentTeam = (baseLevel) => {
-    const teamSize = Math.min(myTeam.length, Math.floor(Math.random() * 3) + 2); // 2~4명
-    const team = [];
-    for (let i = 0; i < teamSize; i++) {
-      const levelVariance = Math.floor(Math.random() * 5) - 2; // -2 ~ +2
-      const level = Math.max(1, baseLevel + levelVariance);
-      team.push({
-        id: `opp-${i}`,
-        level,
-        attack: level * 50 + Math.floor(Math.random() * 100),
-        hp: level * 30 + Math.floor(Math.random() * 50),
-        speed: Math.floor(Math.random() * 100)
-      });
-    }
-    return team.sort((a, b) => b.level - a.level);
-  };
 
   // 랜덤 매칭
   const startMatching = async () => {
@@ -137,10 +120,14 @@ const BattlePanel = ({
         const opponent = opponents[randomIndex];
         setMatchedOpponent(opponent);
 
-        // 상대 팀 생성 (상대의 maxLevel 기반)
-        const avgLevel = Math.round(myTeam.reduce((sum, h) => sum + h.level, 0) / myTeam.length);
-        const oppTeam = generateOpponentTeam(avgLevel);
-        setOpponentTeam(oppTeam);
+        // 상대의 실제 팀 사용
+        if (opponent.team && opponent.team.length > 0) {
+          setOpponentTeam(opponent.team);
+        } else {
+          alert('상대에게 배틀 가능한 영웅이 없습니다!');
+          setIsMatching(false);
+          return;
+        }
       } else {
         alert('매칭 가능한 상대가 없습니다!');
       }
