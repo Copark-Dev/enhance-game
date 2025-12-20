@@ -248,7 +248,7 @@ const EnhanceGame = () => {
     const netProfit = stats.totalEarned - stats.totalSpent;
 
     // 최고 레벨 아이템 이미지 사용
-    const imageUrl = `https://copark-dev.github.io/enhance-game/images/items/${stats.maxLevel}.png`;
+    const imageUrl = `https://cp-enhance.store/images/items/${stats.maxLevel}.png`;
 
     window.Kakao.Share.sendDefault({
       objectType: 'feed',
@@ -257,16 +257,16 @@ const EnhanceGame = () => {
         description: `🏆 최고 달성: +${stats.maxLevel} ${maxTierName}\n⚔️ 현재 장비: +${level} ${currentTierName}\n🎯 성공률: ${successRate}% (${stats.successes}/${stats.attempts})\n💰 순이익: ${formatGold(netProfit)}G`,
         imageUrl: imageUrl,
         link: {
-          mobileWebUrl: 'https://copark-dev.github.io/enhance-game/',
-          webUrl: 'https://copark-dev.github.io/enhance-game/',
+          mobileWebUrl: 'https://cp-enhance.store/',
+          webUrl: 'https://cp-enhance.store/',
         },
       },
       buttons: [
         {
           title: '나도 강화하기',
           link: {
-            mobileWebUrl: 'https://copark-dev.github.io/enhance-game/',
-            webUrl: 'https://copark-dev.github.io/enhance-game/',
+            mobileWebUrl: 'https://cp-enhance.store/',
+            webUrl: 'https://cp-enhance.store/',
           },
         },
       ],

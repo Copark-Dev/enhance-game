@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
-  base: '/enhance-game/',
+  base: '/', // 커스텀 도메인 사용 시 루트로 변경
   build: {
     chunkSizeWarningLimit: 600,
     rollupOptions: {
