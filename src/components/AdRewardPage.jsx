@@ -35,25 +35,51 @@ const AdRewardPage = () => {
     }
   }, [user]);
 
-  // 타이머 시작
+  // 타이머 시작 (페이지가 보일 때만 카운트)
   useEffect(() => {
     if (!canWatch) return;
 
-    timerRef.current = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 1) {
-          clearInterval(timerRef.current);
-          setIsComplete(true);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
+    let lastTime = Date.now();
+
+    const tick = () => {
+      // 페이지가 보이지 않으면 카운트하지 않음
+      if (document.hidden) {
+        lastTime = Date.now();
+        return;
+      }
+
+      const now = Date.now();
+      const elapsed = now - lastTime;
+
+      // 1초 이상 경과했을 때만 카운트 (탭 전환 후 돌아왔을 때 한번에 줄어드는 것 방지)
+      if (elapsed >= 1000 && elapsed < 2000) {
+        setTimeLeft((prev) => {
+          if (prev <= 1) {
+            clearInterval(timerRef.current);
+            setIsComplete(true);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }
+      lastTime = now;
+    };
+
+    timerRef.current = setInterval(tick, 1000);
+
+    // 페이지 visibility 변경 시 lastTime 리셋
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        lastTime = Date.now();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
       if (timerRef.current) {
         clearInterval(timerRef.current);
       }
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [canWatch]);
 

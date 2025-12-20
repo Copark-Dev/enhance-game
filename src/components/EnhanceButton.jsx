@@ -69,18 +69,19 @@ const EnhanceButton = ({ onClick, disabled, isEnhancing, isMax, level = 0 }) => 
         rotate: { duration: 0.2, repeat: isEnhancing ? Infinity : 0 },
       }}
       style={{
-        padding: level >= 15 ? '20px 65px' : '18px 60px',
-        fontSize: level >= 15 ? 22 : 20,
+        padding: level >= 15 ? '12px 28px' : '10px 24px',
+        fontSize: level >= 15 ? 15 : 14,
         fontWeight: 'bold',
         color: '#FFF',
         background: getGradient(),
         backgroundSize: level >= 19 ? '200% 200%' : '100% 100%',
         border: level >= 15 ? '2px solid rgba(255,255,255,0.3)' : 'none',
-        borderRadius: 30,
+        borderRadius: 20,
         cursor: disabled ? 'not-allowed' : 'pointer',
         opacity: disabled ? 0.6 : 1,
         outline: 'none',
         textShadow: level >= 10 ? '0 0 10px rgba(255,255,255,0.5)' : 'none',
+        whiteSpace: 'nowrap',
       }}
     >
       {getButtonText()}

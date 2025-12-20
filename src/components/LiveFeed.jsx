@@ -7,7 +7,15 @@ import { getLevelColor, getLevelTier, getItemImage } from '../utils/constants';
 const LiveFeed = ({ isOpen, onToggle }) => {
   const [logs, setLogs] = useState([]);
   const [newLogIds, setNewLogIds] = useState(new Set());
+  const [unreadCount, setUnreadCount] = useState(0);
   const feedRef = useRef(null);
+
+  // 피드 열면 읽음 처리
+  useEffect(() => {
+    if (isOpen) {
+      setUnreadCount(0);
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     // 실시간 리스너 설정 - 10강 이상만 필터링
@@ -43,6 +51,11 @@ const LiveFeed = ({ isOpen, onToggle }) => {
 
       setLogs(filteredLogs);
       setNewLogIds(newIds);
+
+      // 피드가 닫혀있을 때만 unreadCount 증가
+      if (newIds.size > 0 && !isOpen) {
+        setUnreadCount(prev => Math.min(prev + newIds.size, 99));
+      }
 
       // 새 로그 하이라이트 3초 후 제거
       if (newIds.size > 0) {
@@ -82,10 +95,16 @@ const LiveFeed = ({ isOpen, onToggle }) => {
   };
 
   const getResultText = (result, level, previousLevel) => {
-    if (result === 'destroyed') return '파괴됨';
-    if (result === 'success') return `+${level} 성공!`;
-    if (level < previousLevel) return `+${level} 하락`;
-    return '실패';
+    if (result === 'destroyed') {
+      return `+${previousLevel || '?'} 파괴됨`;
+    }
+    if (result === 'success') {
+      return `+${previousLevel || level-1} → +${level} 성공!`;
+    }
+    if (level < previousLevel) {
+      return `+${previousLevel} → +${level} 하락`;
+    }
+    return `+${previousLevel || level} 실패`;
   };
 
   return (
@@ -102,8 +121,8 @@ const LiveFeed = ({ isOpen, onToggle }) => {
         }}
       >
         📡 {isOpen ? '피드 닫기' : '실시간'}
-        {!isOpen && logs.length > 0 && (
-          <span style={styles.badge}>{logs.length}</span>
+        {!isOpen && unreadCount > 0 && (
+          <span style={styles.badge}>{unreadCount}</span>
         )}
       </motion.button>
 

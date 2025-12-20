@@ -230,7 +230,7 @@ const BattlePanel = ({
         opponentPoison = 0;
       }
 
-      await new Promise(resolve => setTimeout(resolve, 200));
+      await new Promise(resolve => setTimeout(resolve, 400));
       setBattleLog([...logs]);
       setCurrentHp({ my: Math.max(0, myHp), opponent: Math.max(0, opponentHp), maxMy: maxMyHp, maxOpponent: maxOpponentHp });
 
@@ -248,6 +248,7 @@ const BattlePanel = ({
 
         if (result.heal > 0) {
           myHp = Math.min(maxMyHp, myHp + result.heal);
+          await new Promise(resolve => setTimeout(resolve, 300));
           logs.push({ round, attacker: 'me', action: 'heal', damage: result.heal });
         }
         if (result.effect === 'poison') {
@@ -260,6 +261,8 @@ const BattlePanel = ({
         // 속도 기반 연속 공격 (속도 50당 5% 확률, 최대 25%)
         const doubleAttackChance = Math.min(mySpeed / 10, 25);
         if (secureRandom() * 100 < doubleAttackChance && opponentHp > 0) {
+          await new Promise(resolve => setTimeout(resolve, 400));
+          setBattleLog([...logs]);
           const extraResult = processAttack('me', myItem, opponentItem, opponentHp, myAttack * 0.7);
           logs.push({ round, attacker: 'me', action: 'swift', damage: extraResult.damage });
           opponentHp -= extraResult.damage;
@@ -269,7 +272,7 @@ const BattlePanel = ({
         myStunned = false;
       }
 
-      await new Promise(resolve => setTimeout(resolve, 250));
+      await new Promise(resolve => setTimeout(resolve, 700));
       setBattleLog([...logs]);
       setCurrentHp({ my: Math.max(0, myHp), opponent: Math.max(0, opponentHp), maxMy: maxMyHp, maxOpponent: maxOpponentHp });
 
@@ -283,6 +286,7 @@ const BattlePanel = ({
 
         if (result.heal > 0) {
           opponentHp = Math.min(maxOpponentHp, opponentHp + result.heal);
+          await new Promise(resolve => setTimeout(resolve, 300));
           logs.push({ round, attacker: 'opponent', action: 'heal', damage: result.heal });
         }
         if (result.effect === 'poison') {
@@ -295,6 +299,8 @@ const BattlePanel = ({
         // 속도 기반 연속 공격
         const opponentDoubleChance = Math.min(opponentSpeed / 10, 25);
         if (secureRandom() * 100 < opponentDoubleChance && myHp > 0) {
+          await new Promise(resolve => setTimeout(resolve, 400));
+          setBattleLog([...logs]);
           const extraResult = processAttack('opponent', opponentItem, myItem, myHp, opponentAttack * 0.7);
           logs.push({ round, attacker: 'opponent', action: 'swift', damage: extraResult.damage });
           myHp -= extraResult.damage;
@@ -302,6 +308,8 @@ const BattlePanel = ({
 
         // 반격 (8% 확률)
         if (result.action !== 'dodged' && secureRandom() < 0.08 && myHp > 0) {
+          await new Promise(resolve => setTimeout(resolve, 400));
+          setBattleLog([...logs]);
           const counterDmg = Math.floor(myAttack * 0.5);
           opponentHp -= counterDmg;
           logs.push({ round, attacker: 'me', action: 'counter', damage: counterDmg });
@@ -311,7 +319,7 @@ const BattlePanel = ({
         opponentStunned = false;
       }
 
-      await new Promise(resolve => setTimeout(resolve, 250));
+      await new Promise(resolve => setTimeout(resolve, 700));
       setBattleLog([...logs]);
       setCurrentHp({ my: Math.max(0, myHp), opponent: Math.max(0, opponentHp), maxMy: maxMyHp, maxOpponent: maxOpponentHp });
     }
@@ -498,10 +506,11 @@ const BattlePanel = ({
                     <motion.div
                       style={styles.fighterCard}
                       animate={{
-                        x: battleLog.length > 0 && battleLog[battleLog.length-1]?.attacker === 'me' ? [0, 10, 0] : 0,
-                        scale: battleLog.length > 0 && battleLog[battleLog.length-1]?.attacker === 'opponent' && battleLog[battleLog.length-1]?.action !== 'dodged' ? [1, 0.95, 1] : 1
+                        x: battleLog.length > 0 && battleLog[battleLog.length-1]?.attacker === 'me' ? [0, 30, -5, 0] : 0,
+                        scale: battleLog.length > 0 && battleLog[battleLog.length-1]?.attacker === 'opponent' && battleLog[battleLog.length-1]?.action !== 'dodged' ? [1, 0.85, 1.05, 1] : 1,
+                        rotate: battleLog.length > 0 && battleLog[battleLog.length-1]?.attacker === 'opponent' && battleLog[battleLog.length-1]?.action !== 'dodged' ? [0, -8, 5, 0] : 0
                       }}
-                      transition={{ duration: 0.2 }}
+                      transition={{ duration: 0.4, ease: "easeOut" }}
                     >
                       <div style={styles.fighterHpWrapper}>
                         <motion.div
@@ -544,10 +553,11 @@ const BattlePanel = ({
                     <motion.div
                       style={styles.fighterCard}
                       animate={{
-                        x: battleLog.length > 0 && battleLog[battleLog.length-1]?.attacker === 'opponent' ? [0, -10, 0] : 0,
-                        scale: battleLog.length > 0 && battleLog[battleLog.length-1]?.attacker === 'me' && battleLog[battleLog.length-1]?.action !== 'dodged' ? [1, 0.95, 1] : 1
+                        x: battleLog.length > 0 && battleLog[battleLog.length-1]?.attacker === 'opponent' ? [0, -30, 5, 0] : 0,
+                        scale: battleLog.length > 0 && battleLog[battleLog.length-1]?.attacker === 'me' && battleLog[battleLog.length-1]?.action !== 'dodged' ? [1, 0.85, 1.05, 1] : 1,
+                        rotate: battleLog.length > 0 && battleLog[battleLog.length-1]?.attacker === 'me' && battleLog[battleLog.length-1]?.action !== 'dodged' ? [0, 8, -5, 0] : 0
                       }}
-                      transition={{ duration: 0.2 }}
+                      transition={{ duration: 0.4, ease: "easeOut" }}
                     >
                       <div style={styles.fighterHpWrapper}>
                         <motion.div
@@ -582,9 +592,10 @@ const BattlePanel = ({
                   <div style={styles.battleLogBox}>
                     {battleLog.slice(-4).map((log, i) => (
                       <motion.div
-                        key={i}
-                        initial={{ opacity: 0, x: log.attacker === 'me' ? -20 : 20 }}
-                        animate={{ opacity: 1, x: 0 }}
+                        key={`${log.round}-${log.attacker}-${i}`}
+                        initial={{ opacity: 0, x: log.attacker === 'me' ? -50 : 50, scale: 0.8 }}
+                        animate={{ opacity: 1, x: 0, scale: 1 }}
+                        transition={{ duration: 0.3, type: "spring", stiffness: 200 }}
                         style={{
                           ...styles.logEntry,
                           textAlign: log.attacker === 'me' ? 'left' : log.attacker === 'opponent' ? 'right' : 'center',
