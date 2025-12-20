@@ -14,14 +14,14 @@ const RateDisplay = ({ successRate, downgradeRate, destroyRate }) => {
           <motion.div initial={{ width: 0 }} animate={{ width: successRate + '%' }} transition={{ duration: 0.5 }} style={{ height: '100%', backgroundColor: getRateColor(successRate), borderRadius: 4 }} />
         </div>
       </div>
-      {downgradeRate > 0 && (
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: '#FF9800' }}>
-          <span>⬇️ 실패 시 하락</span><span>{downgradeRate}%</span>
-        </div>
-      )}
-      {destroyRate > 0 && (
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: '#F44336' }}>
-          <span>💥 파괴 확률</span><span>{destroyRate}%</span>
+      {(downgradeRate > 0 || destroyRate > 0) && (
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, gap: 12 }}>
+          {downgradeRate > 0 && (
+            <span style={{ color: '#FF9800' }}>⬇️ 하락 {downgradeRate}%</span>
+          )}
+          {destroyRate > 0 && (
+            <span style={{ color: '#F44336' }}>💥 파괴 {destroyRate}%</span>
+          )}
         </div>
       )}
     </div>

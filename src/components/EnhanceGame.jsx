@@ -354,7 +354,7 @@ const EnhanceGame = () => {
           {level > 0 && (
             <div style={styles.statsRow}>
               <span style={styles.statLabel}>⚔️ {itemStats.attack}</span>
-              <span style={styles.statLabel}>❤️ {500 + itemStats.hp * 5}</span>
+              <span style={styles.statLabel}>❤️ {300 + itemStats.hp * 3}</span>
               <span style={styles.statLabel}>💨 {itemStats.speed || 0}</span>
             </div>
           )}
@@ -411,10 +411,7 @@ const EnhanceGame = () => {
                   }}
                 >
                   {hasItem ? (
-                    <>
-                      <span style={{ color, fontWeight: 'bold', fontSize: 14 }}>+{itemLevel}</span>
-                      <span style={{ color: '#888', fontSize: 8 }}>⚔️{item.attack || 0} 💨{item.speed || 0}</span>
-                    </>
+                    <span style={{ color, fontWeight: 'bold', fontSize: 16 }}>+{itemLevel}</span>
                   ) : (
                     <span style={{ color: '#444', fontSize: 18 }}>-</span>
                   )}

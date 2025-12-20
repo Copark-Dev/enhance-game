@@ -64,10 +64,10 @@ const BattlePanel = ({
     return Math.floor(attack + (hp / 2) + (level * 10));
   };
 
-  // 아이템 스탯 기반 HP 계산 (5배 증가로 배틀 길이 증가)
+  // 아이템 스탯 기반 HP 계산 (밸런스 조정)
   const calculateMaxHp = (item) => {
-    const baseHp = 500;
-    const itemHp = (item?.hp || 0) * 5;
+    const baseHp = 300;
+    const itemHp = (item?.hp || 0) * 3;
     return baseHp + itemHp;
   };
 
@@ -492,88 +492,124 @@ const BattlePanel = ({
                 </div>
               ) : isBattling ? (
                 <div style={styles.battleScene}>
-                  {/* 실시간 HP 바 */}
-                  <div style={styles.liveHpSection}>
-                    <div style={styles.liveHpRow}>
-                      <span style={{ color: '#4CAF50', fontSize: 11 }}>나</span>
-                      <div style={styles.liveHpBar}>
+                  {/* 배틀 아레나 */}
+                  <div style={styles.battleArena}>
+                    {/* 내 캐릭터 */}
+                    <motion.div
+                      style={styles.fighterCard}
+                      animate={{
+                        x: battleLog.length > 0 && battleLog[battleLog.length-1]?.attacker === 'me' ? [0, 10, 0] : 0,
+                        scale: battleLog.length > 0 && battleLog[battleLog.length-1]?.attacker === 'opponent' && battleLog[battleLog.length-1]?.action !== 'dodged' ? [1, 0.95, 1] : 1
+                      }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <div style={styles.fighterHpWrapper}>
                         <motion.div
+                          style={{
+                            ...styles.fighterHpBar,
+                            background: currentHp.my / currentHp.maxMy > 0.3
+                              ? 'linear-gradient(90deg, #4CAF50, #8BC34A)'
+                              : 'linear-gradient(90deg, #FF5722, #FF9800)'
+                          }}
                           animate={{ width: `${(currentHp.my / currentHp.maxMy) * 100}%` }}
                           transition={{ duration: 0.3 }}
-                          style={{ ...styles.liveHpFill, backgroundColor: currentHp.my / currentHp.maxMy > 0.3 ? '#4CAF50' : '#FF5722' }}
                         />
                       </div>
-                      <span style={{ color: '#4CAF50', fontSize: 10, minWidth: 70, textAlign: 'right' }}>
-                        {currentHp.my}/{currentHp.maxMy}
-                      </span>
-                    </div>
-                    <div style={styles.liveHpRow}>
-                      <span style={{ color: '#F44336', fontSize: 11 }}>적</span>
-                      <div style={styles.liveHpBar}>
+                      <div style={styles.fighterHpText}>{currentHp.my}/{currentHp.maxMy}</div>
+                      <motion.img
+                        src={getItemImage(selectedItem?.level || 0)}
+                        alt=""
+                        style={styles.fighterImgLarge}
+                        animate={{
+                          filter: battleLog.length > 0 && battleLog[battleLog.length-1]?.attacker === 'opponent' && battleLog[battleLog.length-1]?.action !== 'dodged'
+                            ? ['brightness(1)', 'brightness(2)', 'brightness(1)'] : 'brightness(1)'
+                        }}
+                      />
+                      <div style={{ color: getLevelColor(selectedItem?.level || 0), fontWeight: 'bold', fontSize: 13 }}>
+                        +{selectedItem?.level}
+                      </div>
+                      <div style={{ color: '#4CAF50', fontSize: 11 }}>나</div>
+                    </motion.div>
+
+                    {/* VS 이펙트 */}
+                    <motion.div
+                      style={styles.vsEffect}
+                      animate={{ scale: [1, 1.1, 1], rotate: [0, 5, -5, 0] }}
+                      transition={{ duration: 0.5, repeat: Infinity }}
+                    >
+                      ⚔️
+                    </motion.div>
+
+                    {/* 상대 캐릭터 */}
+                    <motion.div
+                      style={styles.fighterCard}
+                      animate={{
+                        x: battleLog.length > 0 && battleLog[battleLog.length-1]?.attacker === 'opponent' ? [0, -10, 0] : 0,
+                        scale: battleLog.length > 0 && battleLog[battleLog.length-1]?.attacker === 'me' && battleLog[battleLog.length-1]?.action !== 'dodged' ? [1, 0.95, 1] : 1
+                      }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <div style={styles.fighterHpWrapper}>
                         <motion.div
+                          style={{
+                            ...styles.fighterHpBar,
+                            background: currentHp.opponent / currentHp.maxOpponent > 0.3
+                              ? 'linear-gradient(90deg, #F44336, #E91E63)'
+                              : 'linear-gradient(90deg, #FF5722, #FF9800)'
+                          }}
                           animate={{ width: `${(currentHp.opponent / currentHp.maxOpponent) * 100}%` }}
                           transition={{ duration: 0.3 }}
-                          style={{ ...styles.liveHpFill, backgroundColor: currentHp.opponent / currentHp.maxOpponent > 0.3 ? '#F44336' : '#FF5722' }}
                         />
                       </div>
-                      <span style={{ color: '#F44336', fontSize: 10, minWidth: 70, textAlign: 'right' }}>
-                        {currentHp.opponent}/{currentHp.maxOpponent}
-                      </span>
-                    </div>
+                      <div style={styles.fighterHpText}>{currentHp.opponent}/{currentHp.maxOpponent}</div>
+                      <motion.img
+                        src={getItemImage(matchedOpponent?.battleItem?.level || 0)}
+                        alt=""
+                        style={styles.fighterImgLarge}
+                        animate={{
+                          filter: battleLog.length > 0 && battleLog[battleLog.length-1]?.attacker === 'me' && battleLog[battleLog.length-1]?.action !== 'dodged'
+                            ? ['brightness(1)', 'brightness(2)', 'brightness(1)'] : 'brightness(1)'
+                        }}
+                      />
+                      <div style={{ color: getLevelColor(matchedOpponent?.battleItem?.level || 0), fontWeight: 'bold', fontSize: 13 }}>
+                        +{matchedOpponent?.battleItem?.level}
+                      </div>
+                      <div style={{ color: '#F44336', fontSize: 11 }}>{matchedOpponent?.nickname}</div>
+                    </motion.div>
                   </div>
 
-                  <div style={styles.fighters}>
-                    <div style={styles.fighter}>
-                      <img src={getItemImage(selectedItem?.level || 0)} alt="" style={styles.fighterImg} />
-                      <div style={{ color: getLevelColor(selectedItem?.level || 0) }}>
-                        +{selectedItem?.level} {getLevelTier(selectedItem?.level)}
-                      </div>
-                      <div style={styles.itemStatsSmall}>
-                        ⚔️{selectedItem?.attack} 💨{selectedItem?.speed || 0}
-                      </div>
-                    </div>
-                    <div style={styles.vs}>VS</div>
-                    <div style={styles.fighter}>
-                      <img src={getItemImage(matchedOpponent?.battleItem?.level || 0)} alt="" style={styles.fighterImg} />
-                      <div style={{ color: getLevelColor(matchedOpponent?.battleItem?.level || 0) }}>
-                        +{matchedOpponent?.battleItem?.level} {getLevelTier(matchedOpponent?.battleItem?.level)}
-                      </div>
-                      <div style={styles.itemStatsSmall}>
-                        ⚔️{matchedOpponent?.battleItem?.attack} 💨{matchedOpponent?.battleItem?.speed || 0}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div style={styles.battleLog}>
-                    {battleLog.slice(-5).map((log, i) => (
+                  {/* 배틀 로그 */}
+                  <div style={styles.battleLogBox}>
+                    {battleLog.slice(-4).map((log, i) => (
                       <motion.div
                         key={i}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
+                        initial={{ opacity: 0, x: log.attacker === 'me' ? -20 : 20 }}
+                        animate={{ opacity: 1, x: 0 }}
                         style={{
                           ...styles.logEntry,
-                          color: log.attacker === 'system' ? '#9C27B0'
-                            : log.attacker === 'me' ? '#4CAF50' : '#F44336'
+                          textAlign: log.attacker === 'me' ? 'left' : log.attacker === 'opponent' ? 'right' : 'center',
+                          background: log.attacker === 'me' ? 'rgba(76,175,80,0.2)' : log.attacker === 'opponent' ? 'rgba(244,67,54,0.2)' : 'rgba(156,39,176,0.2)',
+                          borderLeft: log.attacker === 'me' ? '3px solid #4CAF50' : 'none',
+                          borderRight: log.attacker === 'opponent' ? '3px solid #F44336' : 'none',
                         }}
                       >
                         {log.attacker === 'system' ? (
-                          <>🧪 {log.target === 'me' ? '나' : matchedOpponent?.nickname} 독 데미지! -{log.damage}</>
+                          <span style={{color: '#9C27B0'}}>🧪 {log.target === 'me' ? '나' : matchedOpponent?.nickname} 독! -{log.damage}</span>
                         ) : (
-                          <>
-                            {log.attacker === 'me' ? '나' : matchedOpponent?.nickname}
-                            {log.action === 'dodged' && ' 회피! 💨'}
-                            {log.action === 'attack' && ` 공격! -${log.damage}`}
-                            {log.action === 'critical' && ` 💥크리티컬! -${log.damage}`}
-                            {log.action === 'double' && ` ⚡더블어택! -${log.damage}`}
-                            {log.action === 'lifesteal' && ` 🧛흡혈! -${log.damage}`}
-                            {log.action === 'poison' && ` 🧪독 공격! -${log.damage}`}
-                            {log.action === 'stun' && ` ⚡스턴! -${log.damage}`}
-                            {log.action === 'pierce' && ` 🗡️관통! -${log.damage}`}
-                            {log.action === 'counter' && ` ↩️반격! -${log.damage}`}
-                            {log.action === 'heal' && ` 💚회복! +${log.damage}`}
-                            {log.action === 'stunned' && ' 💫기절 상태!'}
-                            {log.action === 'swift' && ` 💨연속공격! -${log.damage}`}
-                          </>
+                          <span style={{ color: log.attacker === 'me' ? '#4CAF50' : '#F44336' }}>
+                            {log.action === 'dodged' && '💨 회피!'}
+                            {log.action === 'attack' && `⚔️ -${log.damage}`}
+                            {log.action === 'critical' && `💥 크리티컬! -${log.damage}`}
+                            {log.action === 'double' && `⚡ 더블! -${log.damage}`}
+                            {log.action === 'lifesteal' && `🧛 흡혈! -${log.damage}`}
+                            {log.action === 'poison' && `🧪 독! -${log.damage}`}
+                            {log.action === 'stun' && `⚡ 스턴! -${log.damage}`}
+                            {log.action === 'pierce' && `🗡️ 관통! -${log.damage}`}
+                            {log.action === 'counter' && `↩️ 반격! -${log.damage}`}
+                            {log.action === 'heal' && `💚 +${log.damage}`}
+                            {log.action === 'stunned' && '💫 기절!'}
+                            {log.action === 'swift' && `💨 연속! -${log.damage}`}
+                          </span>
                         )}
                       </motion.div>
                     ))}
@@ -965,67 +1001,67 @@ const styles = {
     cursor: 'pointer',
   },
   battleScene: {
-    padding: 20,
+    padding: 10,
   },
-  liveHpSection: {
-    marginBottom: 16,
-    padding: 12,
+  battleArena: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: '20px 10px',
+    background: 'linear-gradient(180deg, rgba(0,0,0,0.6) 0%, rgba(30,30,60,0.8) 100%)',
+    borderRadius: 16,
+    marginBottom: 12,
+    border: '1px solid rgba(255,255,255,0.1)',
+  },
+  fighterCard: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: 4,
+    minWidth: 100,
+  },
+  fighterHpWrapper: {
+    width: '100%',
+    height: 8,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    borderRadius: 4,
+    overflow: 'hidden',
+    border: '1px solid rgba(255,255,255,0.2)',
+  },
+  fighterHpBar: {
+    height: '100%',
+    borderRadius: 4,
+  },
+  fighterHpText: {
+    fontSize: 10,
+    color: '#fff',
+    fontWeight: 'bold',
+    textShadow: '0 1px 2px rgba(0,0,0,0.8)',
+  },
+  fighterImgLarge: {
+    width: 70,
+    height: 70,
+    objectFit: 'contain',
+    filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.5))',
+  },
+  vsEffect: {
+    fontSize: 32,
+    filter: 'drop-shadow(0 0 10px rgba(255,107,107,0.8))',
+  },
+  battleLogBox: {
     backgroundColor: 'rgba(0,0,0,0.4)',
     borderRadius: 12,
-  },
-  liveHpRow: {
+    padding: 10,
+    minHeight: 80,
     display: 'flex',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 8,
-  },
-  liveHpBar: {
-    flex: 1,
-    height: 16,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 8,
-    overflow: 'hidden',
-  },
-  liveHpFill: {
-    height: '100%',
-    borderRadius: 8,
-  },
-  fighters: {
-    display: 'flex',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  fighter: {
-    textAlign: 'center',
-  },
-  fighterImg: {
-    width: 60,
-    height: 60,
-    objectFit: 'contain',
-  },
-  opponentIcon: {
-    fontSize: 50,
-    marginBottom: 5,
-  },
-  itemStatsSmall: {
-    fontSize: 10,
-    color: '#888',
-  },
-  vs: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#FF6B6B',
-  },
-  battleLog: {
-    backgroundColor: 'rgba(0,0,0,0.3)',
-    borderRadius: 10,
-    padding: 12,
-    minHeight: 100,
+    flexDirection: 'column',
+    gap: 6,
   },
   logEntry: {
-    fontSize: 12,
-    marginBottom: 4,
+    fontSize: 13,
+    padding: '6px 10px',
+    borderRadius: 6,
+    fontWeight: 'bold',
   },
   resultContainer: {
     textAlign: 'center',

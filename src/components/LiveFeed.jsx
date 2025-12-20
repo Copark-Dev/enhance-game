@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { db } from '../utils/firebase';
-import { collection, query, orderBy, limit, onSnapshot, where } from 'firebase/firestore';
+import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
 import { getLevelColor, getLevelTier, getItemImage } from '../utils/constants';
 
 const LiveFeed = ({ isOpen, onToggle }) => {
@@ -11,13 +11,12 @@ const LiveFeed = ({ isOpen, onToggle }) => {
 
   useEffect(() => {
     // 실시간 리스너 설정 - 10강 이상만 필터링
+    // Firestore 복합 인덱스 없이 동작하도록 단순화
     const logsRef = collection(db, 'enhanceLogs');
     const q = query(
       logsRef,
-      where('level', '>=', 10),
-      orderBy('level', 'desc'),
       orderBy('timestamp', 'desc'),
-      limit(30)
+      limit(100) // 더 많이 가져와서 클라이언트에서 필터링
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -31,13 +30,18 @@ const LiveFeed = ({ isOpen, onToggle }) => {
       });
 
       snapshot.forEach((doc) => {
-        newLogs.push({ id: doc.id, ...doc.data() });
+        const data = doc.data();
+        // 10강 이상만 필터링
+        if (data.level >= 10) {
+          newLogs.push({ id: doc.id, ...data });
+        }
       });
 
-      // timestamp 기준으로 재정렬
+      // timestamp 기준으로 재정렬 후 30개만
       newLogs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+      const filteredLogs = newLogs.slice(0, 30);
 
-      setLogs(newLogs);
+      setLogs(filteredLogs);
       setNewLogIds(newIds);
 
       // 새 로그 하이라이트 3초 후 제거
@@ -335,8 +339,12 @@ const styles = {
   },
   nickname: {
     color: '#fff',
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: 'bold',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+    maxWidth: 100,
   },
   tierName: {
     fontSize: 10,

@@ -34,35 +34,50 @@ const createRateLimiter = (minIntervalMs) => {
 // Rate limiter 인스턴스 (노가다 버튼용 - 100ms 간격)
 const grindLimiter = createRateLimiter(100);
 
-// 아이템 스탯 생성 (레벨 기반 + 랜덤) - 속도 추가
+// 레벨별 스탯 배율 (고강일수록 급격히 증가)
+const getStatMultiplier = (level) => {
+  if (level >= 18) return 5.0;   // 초월
+  if (level >= 15) return 3.5;   // 신화
+  if (level >= 12) return 2.5;   // 전설
+  if (level >= 9) return 1.8;    // 에픽
+  if (level >= 6) return 1.3;    // 레어
+  if (level >= 3) return 1.1;    // 언커먼
+  return 1.0;                    // 노말
+};
+
+// 아이템 스탯 생성 (레벨 기반 + 랜덤) - 고강 스케일링 강화
 const generateItemStats = (level, previousStats = null) => {
-  // 레벨별 기본 스탯 범위
-  const baseAttack = level * 50;
-  const baseHp = level * 100;
-  const baseSpeed = level * 15; // 속도 추가
+  const multiplier = getStatMultiplier(level);
 
-  // 랜덤 보너스 (레벨이 높을수록 범위 넓어짐)
-  const attackVariation = level * 10;
-  const hpVariation = level * 20;
-  const speedVariation = level * 8;
+  // 레벨별 기본 스탯 (배율 적용)
+  const baseAttack = Math.floor(level * 40 * multiplier);
+  const baseHp = Math.floor(level * 80 * multiplier);
+  const baseSpeed = Math.floor(level * 12 * multiplier);
 
-  // 기존 스탯이 있으면 보존하고 추가
+  // 랜덤 변동폭 (배율 적용)
+  const attackVariation = Math.floor(level * 15 * multiplier);
+  const hpVariation = Math.floor(level * 25 * multiplier);
+  const speedVariation = Math.floor(level * 10 * multiplier);
+
+  // 기존 스탯이 있으면 보존하고 추가 (강화 시)
   if (previousStats) {
-    const attackBonus = baseAttack / level + Math.floor(secureRandom01() * attackVariation);
-    const hpBonus = baseHp / level + Math.floor(secureRandom01() * hpVariation);
-    const speedBonus = baseSpeed / level + Math.floor(secureRandom01() * speedVariation);
+    // 강화 시 증가량도 배율 적용
+    const levelMultiplier = getStatMultiplier(level);
+    const attackBonus = Math.floor((40 + secureRandom01() * 30) * levelMultiplier);
+    const hpBonus = Math.floor((80 + secureRandom01() * 50) * levelMultiplier);
+    const speedBonus = Math.floor((12 + secureRandom01() * 15) * levelMultiplier);
     return {
-      attack: previousStats.attack + Math.floor(attackBonus),
-      hp: previousStats.hp + Math.floor(hpBonus),
-      speed: (previousStats.speed || 0) + Math.floor(speedBonus)
+      attack: previousStats.attack + attackBonus,
+      hp: previousStats.hp + hpBonus,
+      speed: (previousStats.speed || 0) + speedBonus
     };
   }
 
-  // 신규 아이템 스탯
+  // 신규 아이템 스탯 (0강에서 시작)
   return {
-    attack: baseAttack + Math.floor(secureRandom01() * attackVariation * 2) - attackVariation,
-    hp: baseHp + Math.floor(secureRandom01() * hpVariation * 2) - hpVariation,
-    speed: baseSpeed + Math.floor(secureRandom01() * speedVariation * 2) - speedVariation
+    attack: Math.max(0, baseAttack + Math.floor(secureRandom01() * attackVariation * 2) - attackVariation),
+    hp: Math.max(0, baseHp + Math.floor(secureRandom01() * hpVariation * 2) - hpVariation),
+    speed: Math.max(0, baseSpeed + Math.floor(secureRandom01() * speedVariation * 2) - speedVariation)
   };
 };
 
