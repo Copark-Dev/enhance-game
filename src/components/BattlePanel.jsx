@@ -420,12 +420,34 @@ const BattlePanel = ({
 
                   <div style={styles.battleStats}>
                     <div style={styles.teamResult}>
-                      <span style={{ color: '#4CAF50' }}>내 팀</span>
-                      <span>{battleResult.myTeamSize - battleResult.myDefeated} / {battleResult.myTeamSize} 생존</span>
+                      <span style={{ color: '#4CAF50', fontWeight: 'bold' }}>내 팀</span>
+                      <div style={styles.lifeCircles}>
+                        {Array.from({ length: battleResult.myTeamSize }).map((_, i) => (
+                          <span
+                            key={i}
+                            style={{
+                              ...styles.lifeCircle,
+                              backgroundColor: i < battleResult.myTeamSize - battleResult.myDefeated ? '#4CAF50' : 'transparent',
+                              borderColor: '#4CAF50',
+                            }}
+                          />
+                        ))}
+                      </div>
                     </div>
                     <div style={styles.teamResult}>
-                      <span style={{ color: '#F44336' }}>{battleResult.opponentName}</span>
-                      <span>{battleResult.oppTeamSize - battleResult.oppDefeated} / {battleResult.oppTeamSize} 생존</span>
+                      <span style={{ color: '#F44336', fontWeight: 'bold' }}>{battleResult.opponentName}</span>
+                      <div style={styles.lifeCircles}>
+                        {Array.from({ length: battleResult.oppTeamSize }).map((_, i) => (
+                          <span
+                            key={i}
+                            style={{
+                              ...styles.lifeCircle,
+                              backgroundColor: i < battleResult.oppTeamSize - battleResult.oppDefeated ? '#F44336' : 'transparent',
+                              borderColor: '#F44336',
+                            }}
+                          />
+                        ))}
+                      </div>
                     </div>
                     <div style={{ textAlign: 'center', color: '#888', fontSize: 12, marginTop: 8 }}>
                       총 {battleResult.rounds} 라운드
@@ -453,15 +475,37 @@ const BattlePanel = ({
                 </div>
               ) : isBattling ? (
                 <div style={styles.battleScene}>
-                  {/* 팀 현황 */}
+                  {/* 팀 현황 - 동그라미 UI */}
                   <div style={styles.teamStatus}>
                     <div style={styles.teamStatusSide}>
-                      <span style={{ color: '#4CAF50', fontWeight: 'bold' }}>내 팀</span>
-                      <span>{myTeam.length - defeatedCount.my} / {myTeam.length}</span>
+                      <span style={{ color: '#4CAF50', fontWeight: 'bold', fontSize: 12 }}>내 팀</span>
+                      <div style={styles.lifeCircles}>
+                        {Array.from({ length: myTeam.length }).map((_, i) => (
+                          <span
+                            key={i}
+                            style={{
+                              ...styles.lifeCircle,
+                              backgroundColor: i < myTeam.length - defeatedCount.my ? '#4CAF50' : 'transparent',
+                              borderColor: '#4CAF50',
+                            }}
+                          />
+                        ))}
+                      </div>
                     </div>
                     <div style={styles.teamStatusSide}>
-                      <span style={{ color: '#F44336', fontWeight: 'bold' }}>상대</span>
-                      <span>{opponentTeam.length - defeatedCount.opponent} / {opponentTeam.length}</span>
+                      <span style={{ color: '#F44336', fontWeight: 'bold', fontSize: 12 }}>상대</span>
+                      <div style={styles.lifeCircles}>
+                        {Array.from({ length: opponentTeam.length }).map((_, i) => (
+                          <span
+                            key={i}
+                            style={{
+                              ...styles.lifeCircle,
+                              backgroundColor: i < opponentTeam.length - defeatedCount.opponent ? '#F44336' : 'transparent',
+                              borderColor: '#F44336',
+                            }}
+                          />
+                        ))}
+                      </div>
                     </div>
                   </div>
 
@@ -1238,7 +1282,8 @@ const styles = {
   teamResult: {
     display: 'flex',
     justifyContent: 'space-between',
-    padding: '8px 12px',
+    alignItems: 'center',
+    padding: '10px 14px',
     backgroundColor: 'rgba(255,255,255,0.05)',
     borderRadius: 8,
     marginBottom: 6,
@@ -1257,9 +1302,20 @@ const styles = {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    gap: 2,
+    gap: 4,
     fontSize: 12,
     color: '#fff',
+  },
+  lifeCircles: {
+    display: 'flex',
+    gap: 4,
+  },
+  lifeCircle: {
+    width: 12,
+    height: 12,
+    borderRadius: '50%',
+    border: '2px solid',
+    transition: 'all 0.3s ease',
   },
   teamVersus: {
     display: 'flex',
