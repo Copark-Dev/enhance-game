@@ -177,6 +177,7 @@ const LiveFeed = ({ isOpen, onToggle }) => {
                           src={getItemImage(log.level, log.result === 'destroyed')}
                           alt=""
                           style={styles.itemImage}
+                          onError={(e) => { e.target.src = getItemImage(0); }}
                         />
                         {log.result !== 'destroyed' && (
                           <span style={{
