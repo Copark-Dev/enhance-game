@@ -12,9 +12,13 @@ const LiveFeed = ({ isOpen, onToggle, onSendChat, user }) => {
   const [isSending, setIsSending] = useState(false);
   const feedRef = useRef(null);
   const inputRef = useRef(null);
+  const isOpenRef = useRef(isOpen);
+  const isFirstLoad = useRef(true);
 
-  // 피드 열면 읽음 처리
+  // isOpen ref 업데이트
   useEffect(() => {
+    isOpenRef.current = isOpen;
+    // 피드 열면 읽음 처리
     if (isOpen) {
       setUnreadCount(0);
     }
@@ -22,23 +26,26 @@ const LiveFeed = ({ isOpen, onToggle, onSendChat, user }) => {
 
   useEffect(() => {
     // 실시간 리스너 설정 - 10강 이상만 필터링
-    // Firestore 복합 인덱스 없이 동작하도록 단순화
     const logsRef = collection(db, 'enhanceLogs');
     const q = query(
       logsRef,
       orderBy('timestamp', 'desc'),
-      limit(100) // 더 많이 가져와서 클라이언트에서 필터링
+      limit(100)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const newLogs = [];
       const newIds = new Set();
 
-      snapshot.docChanges().forEach((change) => {
-        if (change.type === 'added') {
-          newIds.add(change.doc.id);
-        }
-      });
+      // 첫 로드가 아닐 때만 새 문서 추적
+      if (!isFirstLoad.current) {
+        snapshot.docChanges().forEach((change) => {
+          if (change.type === 'added') {
+            newIds.add(change.doc.id);
+          }
+        });
+      }
+      isFirstLoad.current = false;
 
       snapshot.forEach((doc) => {
         const data = doc.data();
@@ -53,15 +60,14 @@ const LiveFeed = ({ isOpen, onToggle, onSendChat, user }) => {
       const filteredLogs = newLogs.slice(0, 30);
 
       setLogs(filteredLogs);
-      setNewLogIds(newIds);
 
-      // 피드가 닫혀있을 때만 unreadCount 증가
-      if (newIds.size > 0 && !isOpen) {
-        setUnreadCount(prev => Math.min(prev + newIds.size, 99));
-      }
-
-      // 새 로그 하이라이트 3초 후 제거
+      // 피드가 닫혀있을 때만 unreadCount 증가 (ref 사용)
       if (newIds.size > 0) {
+        setNewLogIds(newIds);
+        if (!isOpenRef.current) {
+          setUnreadCount(prev => Math.min(prev + newIds.size, 99));
+        }
+        // 새 로그 하이라이트 3초 후 제거
         setTimeout(() => setNewLogIds(new Set()), 3000);
       }
     }, (error) => {
@@ -69,7 +75,7 @@ const LiveFeed = ({ isOpen, onToggle, onSendChat, user }) => {
     });
 
     return () => unsubscribe();
-  }, [isOpen]);
+  }, []); // dependency array 비움 - 한 번만 설정
 
   const getTimeAgo = (timestamp) => {
     const now = new Date();

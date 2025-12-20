@@ -60,20 +60,20 @@ const EnhanceGame = () => {
 
   // 연속 강화를 위한 ref (stale closure 방지)
   const autoEnhanceRef = useRef({
-    canEnhance, isEnhancing, result, isDestroyed, level, enhance
+    canEnhance, isEnhancing, isDestroyed, level, enhance, gold, enhanceCost
   });
 
   // ref 값 업데이트
   useEffect(() => {
-    autoEnhanceRef.current = { canEnhance, isEnhancing, result, isDestroyed, level, enhance };
-  }, [canEnhance, isEnhancing, result, isDestroyed, level, enhance]);
+    autoEnhanceRef.current = { canEnhance, isEnhancing, isDestroyed, level, enhance, gold, enhanceCost };
+  }, [canEnhance, isEnhancing, isDestroyed, level, enhance, gold, enhanceCost]);
 
   // 연속 강화 (오토 강화) - setInterval 사용
   useEffect(() => {
     if (!isAutoEnhancing) return;
 
     const interval = setInterval(() => {
-      const { canEnhance, isEnhancing, result, isDestroyed, level, enhance } = autoEnhanceRef.current;
+      const { isEnhancing, isDestroyed, level, enhance, gold, enhanceCost } = autoEnhanceRef.current;
 
       // 강화 불가능하면 자동으로 중지
       if (isDestroyed || level >= MAX_LEVEL) {
@@ -82,16 +82,16 @@ const EnhanceGame = () => {
       }
 
       // 골드 부족하면 중지
-      if (!canEnhance) {
+      if (gold < enhanceCost) {
         setIsAutoEnhancing(false);
         return;
       }
 
-      // 강화 중이 아니고, 결과도 없을 때만 다음 강화 시작
-      if (!isEnhancing && !result) {
+      // 강화 중이 아닐 때만 다음 강화 시작 (result 체크 제거!)
+      if (!isEnhancing) {
         enhance();
       }
-    }, 300); // 300ms마다 체크
+    }, 500);
 
     return () => clearInterval(interval);
   }, [isAutoEnhancing]);
@@ -415,19 +415,28 @@ const EnhanceGame = () => {
           ) : (
             <>
               <div style={styles.buttonRow} className="button-row">
-                <motion.button
-                  onClick={() => setIsAutoEnhancing(!isAutoEnhancing)}
-                  disabled={!canEnhance && !isAutoEnhancing}
-                  whileHover={canEnhance || isAutoEnhancing ? { scale: 1.1 } : {}}
-                  whileTap={canEnhance || isAutoEnhancing ? { scale: 0.9 } : {}}
+                {/* 연속강화 토글 */}
+                <motion.div
+                  onClick={() => (canEnhance || isAutoEnhancing) && setIsAutoEnhancing(!isAutoEnhancing)}
+                  whileTap={(canEnhance || isAutoEnhancing) ? { scale: 0.95 } : {}}
                   style={{
-                    ...styles.autoBtn,
-                    backgroundColor: isAutoEnhancing ? '#F44336' : '#9C27B0',
+                    ...styles.autoToggle,
                     opacity: !canEnhance && !isAutoEnhancing ? 0.4 : 1,
                     cursor: !canEnhance && !isAutoEnhancing ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  <span style={styles.autoLabel}>연속</span>
+                  <div style={{
+                    ...styles.toggleTrack,
+                    backgroundColor: isAutoEnhancing ? '#4CAF50' : '#444'
                   }}>
-                  {isAutoEnhancing ? '⏹️' : '🔄'}
-                </motion.button>
+                    <motion.div
+                      style={styles.toggleThumb}
+                      animate={{ x: isAutoEnhancing ? 18 : 0 }}
+                      transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                    />
+                  </div>
+                </motion.div>
                 <EnhanceButton onClick={enhance} disabled={!canEnhance || isAutoEnhancing} isEnhancing={isEnhancing} isMax={level >= MAX_LEVEL} level={level} />
               </div>
               <div style={styles.buttonRow} className="button-row">
@@ -767,19 +776,33 @@ const styles = {
     boxShadow: '0 4px 15px rgba(124,77,255,0.25)',
     whiteSpace: 'nowrap',
   },
-  autoBtn: {
-    width: 44,
-    height: 44,
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#fff',
-    border: 'none',
-    borderRadius: '50%',
-    boxShadow: '0 4px 15px rgba(156,39,176,0.3)',
+  autoToggle: {
     display: 'flex',
     alignItems: 'center',
-    justifyContent: 'center',
-    padding: 0,
+    gap: 6,
+    padding: '8px 12px',
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 20,
+    border: '1px solid rgba(255,255,255,0.1)',
+  },
+  autoLabel: {
+    fontSize: 12,
+    color: '#aaa',
+    fontWeight: '600',
+  },
+  toggleTrack: {
+    width: 36,
+    height: 18,
+    borderRadius: 9,
+    padding: 2,
+    transition: 'background-color 0.2s',
+  },
+  toggleThumb: {
+    width: 14,
+    height: 14,
+    backgroundColor: '#fff',
+    borderRadius: '50%',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
   },
   warning: {
     marginTop: 12,
