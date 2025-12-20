@@ -28,7 +28,7 @@ const EnhanceGame = () => {
   const {
     user, logout, updateUserData, getRankings, claimDailyReward, claimAchievement, updateBattleStats,
     getRandomOpponents, saveBattleNotification, getBattleNotifications, markBattleNotificationsRead,
-    saveFCMToken, notifyFriendsHighEnhance, saveEnhanceLog,
+    saveFCMToken, notifyFriendsHighEnhance, saveEnhanceLog, saveChatMessage,
     getGiftNotifications, markGiftNotificationsRead,
     offlineReward, dismissOfflineReward
   } = useAuth();
@@ -596,6 +596,8 @@ const EnhanceGame = () => {
       <LiveFeed
         isOpen={showLiveFeed}
         onToggle={() => setShowLiveFeed(!showLiveFeed)}
+        user={user}
+        onSendChat={saveChatMessage}
       />
 
       {/* 하단 네비게이션 */}

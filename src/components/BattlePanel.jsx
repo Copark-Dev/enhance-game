@@ -19,6 +19,7 @@ const BattlePanel = ({
   const [battleLog, setBattleLog] = useState([]);
   const [tab, setTab] = useState('battle'); // 'battle' | 'history'
   const [battleHistory, setBattleHistory] = useState([]);
+  const [selectedHistory, setSelectedHistory] = useState(null);
 
   // 순차 전투용 상태
   const [myTeam, setMyTeam] = useState([]);
@@ -298,7 +299,9 @@ const BattlePanel = ({
 
     const won = oppIdx >= oppFighters.length;
     const totalOppLevel = opponentTeam.reduce((sum, h) => sum + h.level, 0);
-    const reward = won ? Math.floor(2000 + totalOppLevel * 300 + secureRandom() * 2000) : 0;
+    const totalMyLevel = myTeam.reduce((sum, h) => sum + h.level, 0);
+    // 보상 대폭 상향: 기본 5000G + 상대팀 레벨당 500G + 내팀 레벨당 200G + 랜덤 5000G
+    const reward = won ? Math.floor(5000 + totalOppLevel * 500 + totalMyLevel * 200 + secureRandom() * 5000) : 0;
 
     const result = {
       won,
@@ -308,8 +311,14 @@ const BattlePanel = ({
       oppDefeated,
       opponentName: matchedOpponent.nickname,
       opponentId: matchedOpponent.id,
+      opponentProfileImage: matchedOpponent.profileImage,
       reward,
-      rounds: totalRounds
+      rounds: totalRounds,
+      // 상세정보용 팀 데이터
+      myTeamLevels: myTeam.map(h => h.level),
+      oppTeamLevels: opponentTeam.map(h => h.level),
+      myTotalPower: getTeamPower(myTeam),
+      oppTotalPower: getTeamPower(opponentTeam)
     };
 
     setBattleResult(result);
@@ -702,17 +711,113 @@ const BattlePanel = ({
                 </>
               )}
             </>
+          ) : selectedHistory ? (
+            // 전적 상세 정보
+            <div style={styles.historyDetail}>
+              <div style={styles.historyDetailHeader}>
+                <button onClick={() => setSelectedHistory(null)} style={styles.backBtn}>
+                  ← 뒤로
+                </button>
+                <span style={{ color: selectedHistory.won ? '#4CAF50' : '#F44336', fontSize: 20, fontWeight: 'bold' }}>
+                  {selectedHistory.won ? '🎉 승리' : '😢 패배'}
+                </span>
+              </div>
+
+              <div style={styles.detailSection}>
+                <div style={styles.detailLabel}>상대</div>
+                <div style={styles.detailOpponent}>
+                  {selectedHistory.opponentProfileImage && (
+                    <img src={selectedHistory.opponentProfileImage} alt="" style={styles.detailAvatar} />
+                  )}
+                  <span style={{ color: '#fff', fontSize: 16, fontWeight: 'bold' }}>{selectedHistory.opponentName}</span>
+                </div>
+              </div>
+
+              <div style={styles.detailSection}>
+                <div style={styles.detailLabel}>전투 결과</div>
+                <div style={styles.detailGrid}>
+                  <div style={styles.detailCard}>
+                    <div style={{ color: '#4CAF50', fontSize: 13 }}>내 팀</div>
+                    <div style={{ color: '#fff', fontSize: 18, fontWeight: 'bold' }}>
+                      {selectedHistory.myTeamSize - selectedHistory.myDefeated} / {selectedHistory.myTeamSize}
+                    </div>
+                    <div style={{ color: '#888', fontSize: 11 }}>생존</div>
+                  </div>
+                  <div style={styles.detailCard}>
+                    <div style={{ color: '#F44336', fontSize: 13 }}>상대 팀</div>
+                    <div style={{ color: '#fff', fontSize: 18, fontWeight: 'bold' }}>
+                      {selectedHistory.oppTeamSize - selectedHistory.oppDefeated} / {selectedHistory.oppTeamSize}
+                    </div>
+                    <div style={{ color: '#888', fontSize: 11 }}>생존</div>
+                  </div>
+                </div>
+              </div>
+
+              {selectedHistory.myTeamLevels && (
+                <div style={styles.detailSection}>
+                  <div style={styles.detailLabel}>팀 구성</div>
+                  <div style={styles.teamLevelsRow}>
+                    <div style={styles.teamLevelsBox}>
+                      <div style={{ color: '#4CAF50', fontSize: 11, marginBottom: 4 }}>내 팀</div>
+                      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', justifyContent: 'center' }}>
+                        {selectedHistory.myTeamLevels.map((lvl, i) => (
+                          <span key={i} style={{ ...styles.levelBadge, color: getLevelColor(lvl) }}>+{lvl}</span>
+                        ))}
+                      </div>
+                      <div style={{ color: '#FFD700', fontSize: 10, marginTop: 4 }}>
+                        전투력: {selectedHistory.myTotalPower || '-'}
+                      </div>
+                    </div>
+                    <div style={styles.teamLevelsBox}>
+                      <div style={{ color: '#F44336', fontSize: 11, marginBottom: 4 }}>상대 팀</div>
+                      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', justifyContent: 'center' }}>
+                        {selectedHistory.oppTeamLevels.map((lvl, i) => (
+                          <span key={i} style={{ ...styles.levelBadge, color: getLevelColor(lvl) }}>+{lvl}</span>
+                        ))}
+                      </div>
+                      <div style={{ color: '#FFD700', fontSize: 10, marginTop: 4 }}>
+                        전투력: {selectedHistory.oppTotalPower || '-'}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div style={styles.detailSection}>
+                <div style={styles.detailLabel}>전투 정보</div>
+                <div style={styles.detailInfoGrid}>
+                  <div style={styles.detailInfoItem}>
+                    <span style={{ color: '#888' }}>총 라운드</span>
+                    <span style={{ color: '#fff' }}>{selectedHistory.rounds}회</span>
+                  </div>
+                  <div style={styles.detailInfoItem}>
+                    <span style={{ color: '#888' }}>획득 골드</span>
+                    <span style={{ color: '#FFD700' }}>
+                      {selectedHistory.won ? `+${formatGold(selectedHistory.reward)}G` : '-'}
+                    </span>
+                  </div>
+                  <div style={styles.detailInfoItem}>
+                    <span style={{ color: '#888' }}>일시</span>
+                    <span style={{ color: '#fff' }}>{new Date(selectedHistory.timestamp).toLocaleString()}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
           ) : (
             <div style={styles.historyList}>
               {battleHistory.length === 0 ? (
                 <div style={styles.empty}>전적이 없습니다</div>
               ) : (
                 battleHistory.map((battle, i) => (
-                  <div
+                  <motion.div
                     key={i}
+                    onClick={() => setSelectedHistory(battle)}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
                     style={{
                       ...styles.historyItem,
-                      borderLeftColor: battle.won ? '#4CAF50' : '#F44336'
+                      borderLeftColor: battle.won ? '#4CAF50' : '#F44336',
+                      cursor: 'pointer'
                     }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -728,20 +833,21 @@ const BattlePanel = ({
                     </div>
                     <div style={{ color: '#888', fontSize: 11, marginTop: 2 }}>
                       {battle.myTeamSize ? (
-                        // 새로운 팀 배틀 형식
                         <>
                           내 팀: {battle.myTeamSize - battle.myDefeated}/{battle.myTeamSize} 생존 | {battle.rounds}라운드
                           {battle.won && <span style={{ color: '#FFD700' }}> | +{formatGold(battle.reward)}G</span>}
                         </>
                       ) : (
-                        // 이전 1v1 형식 (호환성)
                         <>
                           내 영웅: +{battle.myLevel} | {battle.rounds}라운드
                           {battle.won && <span style={{ color: '#FFD700' }}> | +{formatGold(battle.reward)}G</span>}
                         </>
                       )}
                     </div>
-                  </div>
+                    <div style={{ color: '#555', fontSize: 10, marginTop: 4, textAlign: 'right' }}>
+                      탭하여 상세보기 →
+                    </div>
+                  </motion.div>
                 ))
               )}
             </div>
@@ -1029,6 +1135,90 @@ const styles = {
     backgroundColor: 'rgba(255,255,255,0.05)',
     borderRadius: 8,
     borderLeft: '3px solid',
+  },
+  historyDetail: {
+    padding: 10,
+  },
+  historyDetailHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  backBtn: {
+    padding: '8px 16px',
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    color: '#fff',
+    border: 'none',
+    borderRadius: 8,
+    cursor: 'pointer',
+    fontSize: 13,
+  },
+  detailSection: {
+    marginBottom: 16,
+  },
+  detailLabel: {
+    color: '#888',
+    fontSize: 11,
+    marginBottom: 8,
+    textTransform: 'uppercase',
+    letterSpacing: '0.5px',
+  },
+  detailOpponent: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 10,
+    padding: '12px 16px',
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 10,
+  },
+  detailAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: '50%',
+    border: '2px solid #444',
+  },
+  detailGrid: {
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr',
+    gap: 10,
+  },
+  detailCard: {
+    padding: 16,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 10,
+    textAlign: 'center',
+  },
+  teamLevelsRow: {
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr',
+    gap: 10,
+  },
+  teamLevelsBox: {
+    padding: 12,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 10,
+    textAlign: 'center',
+  },
+  levelBadge: {
+    padding: '2px 6px',
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    borderRadius: 4,
+    fontSize: 11,
+    fontWeight: 'bold',
+  },
+  detailInfoGrid: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 8,
+  },
+  detailInfoItem: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    padding: '10px 14px',
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 8,
+    fontSize: 13,
   },
   statsInfo: {
     display: 'flex',

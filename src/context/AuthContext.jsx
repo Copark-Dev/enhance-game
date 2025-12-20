@@ -743,6 +743,25 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // 채팅 메시지 저장
+  const saveChatMessage = async (message) => {
+    if (!user || !message.trim()) return;
+
+    try {
+      const chatRef = doc(collection(db, 'enhanceLogs'));
+      await setDoc(chatRef, {
+        type: 'chat',
+        userId: user.id,
+        nickname: user.nickname,
+        profileImage: user.profileImage,
+        message: message.trim().slice(0, 100), // 최대 100자
+        timestamp: new Date().toISOString()
+      });
+    } catch (err) {
+      console.error('채팅 저장 실패:', err);
+    }
+  };
+
   return (
     <AuthContext.Provider value={{
       user, loading, loginWithKakao, logout, updateUserData,
@@ -750,7 +769,7 @@ export const AuthProvider = ({ children }) => {
       getGiftNotifications, markGiftNotificationsRead,
       getRankings, claimDailyReward, claimAchievement, updateBattleStats,
       getRandomOpponents, saveBattleNotification, getBattleNotifications, markBattleNotificationsRead,
-      saveFCMToken, notifyFriendsHighEnhance, saveEnhanceLog,
+      saveFCMToken, notifyFriendsHighEnhance, saveEnhanceLog, saveChatMessage,
       offlineReward, dismissOfflineReward
     }}>
       {children}

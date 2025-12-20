@@ -4,11 +4,14 @@ import { db } from '../utils/firebase';
 import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
 import { getLevelColor, getLevelTier, getItemImage } from '../utils/constants';
 
-const LiveFeed = ({ isOpen, onToggle }) => {
+const LiveFeed = ({ isOpen, onToggle, onSendChat, user }) => {
   const [logs, setLogs] = useState([]);
   const [newLogIds, setNewLogIds] = useState(new Set());
   const [unreadCount, setUnreadCount] = useState(0);
+  const [chatInput, setChatInput] = useState('');
+  const [isSending, setIsSending] = useState(false);
   const feedRef = useRef(null);
+  const inputRef = useRef(null);
 
   // 피드 열면 읽음 처리
   useEffect(() => {
@@ -39,8 +42,8 @@ const LiveFeed = ({ isOpen, onToggle }) => {
 
       snapshot.forEach((doc) => {
         const data = doc.data();
-        // 10강 이상만 필터링
-        if (data.level >= 10) {
+        // 채팅 메시지는 모두 표시, 강화 로그는 10강 이상만
+        if (data.type === 'chat' || data.level >= 10) {
           newLogs.push({ id: doc.id, ...data });
         }
       });
@@ -107,6 +110,26 @@ const LiveFeed = ({ isOpen, onToggle }) => {
     return `+${previousLevel || level} 실패`;
   };
 
+  const handleSendChat = async () => {
+    if (!chatInput.trim() || isSending || !onSendChat) return;
+
+    setIsSending(true);
+    try {
+      await onSendChat(chatInput);
+      setChatInput('');
+    } catch (err) {
+      console.error('채팅 전송 실패:', err);
+    }
+    setIsSending(false);
+  };
+
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendChat();
+    }
+  };
+
   return (
     <>
       {/* 토글 버튼 */}
@@ -147,77 +170,130 @@ const LiveFeed = ({ isOpen, onToggle }) => {
             <div ref={feedRef} style={styles.feedList}>
               {logs.length === 0 ? (
                 <div style={styles.empty}>
-                  아직 강화 기록이 없어요
+                  아직 기록이 없어요
                 </div>
               ) : (
                 logs.map((log) => (
-                  <motion.div
-                    key={log.id}
-                    initial={{ opacity: 0, y: -20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    style={{
-                      ...styles.logItem,
-                      backgroundColor: newLogIds.has(log.id)
-                        ? 'rgba(255,215,0,0.2)'
-                        : log.result === 'destroyed'
-                        ? 'rgba(244,67,54,0.1)'
-                        : log.result === 'success'
-                        ? 'rgba(76,175,80,0.1)'
-                        : 'rgba(255,255,255,0.05)',
-                      borderLeftColor: log.result === 'destroyed'
-                        ? '#F44336'
-                        : log.result === 'success'
-                        ? getLevelColor(log.level)
-                        : '#666',
-                    }}
-                  >
-                    <div style={styles.logLeft}>
-                      <div style={styles.itemImageWrapper}>
-                        <img
-                          src={getItemImage(log.level, log.result === 'destroyed')}
-                          alt=""
-                          style={styles.itemImage}
-                          onError={(e) => { e.target.src = getItemImage(0); }}
-                        />
-                        {log.result !== 'destroyed' && (
-                          <span style={{
-                            ...styles.itemLevel,
-                            color: getLevelColor(log.level),
-                          }}>
-                            +{log.level}
-                          </span>
-                        )}
+                  log.type === 'chat' ? (
+                    // 채팅 메시지
+                    <motion.div
+                      key={log.id}
+                      initial={{ opacity: 0, y: -20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      style={{
+                        ...styles.chatItem,
+                        backgroundColor: newLogIds.has(log.id)
+                          ? 'rgba(100,149,237,0.2)'
+                          : 'rgba(255,255,255,0.03)',
+                      }}
+                    >
+                      <div style={styles.chatHeader}>
+                        {log.profileImage ? (
+                          <img src={log.profileImage} alt="" style={styles.miniAvatar} />
+                        ) : null}
+                        <span style={styles.chatNickname}>{log.nickname}</span>
+                        <span style={styles.time}>{getTimeAgo(log.timestamp)}</span>
                       </div>
-                      <div style={styles.logInfo}>
-                        <div style={styles.nicknameRow}>
-                          {log.profileImage ? (
-                            <img src={log.profileImage} alt="" style={styles.miniAvatar} />
-                          ) : null}
-                          <span style={styles.nickname}>{log.nickname}</span>
+                      <div style={styles.chatMessage}>{log.message}</div>
+                    </motion.div>
+                  ) : (
+                    // 강화 로그
+                    <motion.div
+                      key={log.id}
+                      initial={{ opacity: 0, y: -20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      style={{
+                        ...styles.logItem,
+                        backgroundColor: newLogIds.has(log.id)
+                          ? 'rgba(255,215,0,0.2)'
+                          : log.result === 'destroyed'
+                          ? 'rgba(244,67,54,0.1)'
+                          : log.result === 'success'
+                          ? 'rgba(76,175,80,0.1)'
+                          : 'rgba(255,255,255,0.05)',
+                        borderLeftColor: log.result === 'destroyed'
+                          ? '#F44336'
+                          : log.result === 'success'
+                          ? getLevelColor(log.level)
+                          : '#666',
+                      }}
+                    >
+                      <div style={styles.logLeft}>
+                        <div style={styles.itemImageWrapper}>
+                          <img
+                            src={getItemImage(log.level, log.result === 'destroyed')}
+                            alt=""
+                            style={styles.itemImage}
+                            onError={(e) => { e.target.src = getItemImage(0); }}
+                          />
+                          {log.result !== 'destroyed' && (
+                            <span style={{
+                              ...styles.itemLevel,
+                              color: getLevelColor(log.level),
+                            }}>
+                              +{log.level}
+                            </span>
+                          )}
                         </div>
-                        <span style={{
-                          ...styles.result,
-                          color: log.result === 'destroyed'
-                            ? '#F44336'
-                            : log.result === 'success'
-                            ? getLevelColor(log.level)
-                            : '#888'
-                        }}>
-                          {getResultEmoji(log.result, log.level)} {getResultText(log.result, log.level, log.previousLevel)}
-                        </span>
-                        <span style={{
-                          ...styles.tierName,
-                          color: getLevelColor(log.result === 'destroyed' ? 0 : log.level),
-                        }}>
-                          {getLevelTier(log.result === 'destroyed' ? 0 : log.level)}
-                        </span>
+                        <div style={styles.logInfo}>
+                          <div style={styles.nicknameRow}>
+                            {log.profileImage ? (
+                              <img src={log.profileImage} alt="" style={styles.miniAvatar} />
+                            ) : null}
+                            <span style={styles.nickname}>{log.nickname}</span>
+                          </div>
+                          <span style={{
+                            ...styles.result,
+                            color: log.result === 'destroyed'
+                              ? '#F44336'
+                              : log.result === 'success'
+                              ? getLevelColor(log.level)
+                              : '#888'
+                          }}>
+                            {getResultEmoji(log.result, log.level)} {getResultText(log.result, log.level, log.previousLevel)}
+                          </span>
+                          <span style={{
+                            ...styles.tierName,
+                            color: getLevelColor(log.result === 'destroyed' ? 0 : log.level),
+                          }}>
+                            {getLevelTier(log.result === 'destroyed' ? 0 : log.level)}
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                    <span style={styles.time}>{getTimeAgo(log.timestamp)}</span>
-                  </motion.div>
+                      <span style={styles.time}>{getTimeAgo(log.timestamp)}</span>
+                    </motion.div>
+                  )
                 ))
               )}
             </div>
+
+            {/* 채팅 입력 */}
+            {user && onSendChat && (
+              <div style={styles.chatInputArea}>
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  placeholder="메시지 입력..."
+                  maxLength={100}
+                  style={styles.chatInput}
+                />
+                <motion.button
+                  onClick={handleSendChat}
+                  disabled={!chatInput.trim() || isSending}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  style={{
+                    ...styles.sendBtn,
+                    opacity: !chatInput.trim() || isSending ? 0.5 : 1,
+                  }}
+                >
+                  {isSending ? '...' : '전송'}
+                </motion.button>
+              </div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
@@ -381,6 +457,57 @@ const styles = {
     color: '#666',
     fontSize: 11,
     flexShrink: 0,
+  },
+  chatItem: {
+    padding: '10px 12px',
+    marginBottom: 6,
+    borderRadius: 10,
+    borderLeft: '3px solid #6495ED',
+  },
+  chatHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 4,
+  },
+  chatNickname: {
+    color: '#6495ED',
+    fontSize: 13,
+    fontWeight: 'bold',
+    flex: 1,
+  },
+  chatMessage: {
+    color: '#fff',
+    fontSize: 14,
+    lineHeight: 1.4,
+    wordBreak: 'break-word',
+  },
+  chatInputArea: {
+    display: 'flex',
+    gap: 8,
+    padding: '12px',
+    borderTop: '1px solid #333',
+    backgroundColor: 'rgba(0,0,0,0.3)',
+  },
+  chatInput: {
+    flex: 1,
+    padding: '10px 14px',
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    border: '1px solid #444',
+    borderRadius: 20,
+    color: '#fff',
+    fontSize: 14,
+    outline: 'none',
+  },
+  sendBtn: {
+    padding: '10px 16px',
+    backgroundColor: '#6495ED',
+    color: '#fff',
+    border: 'none',
+    borderRadius: 20,
+    fontSize: 13,
+    fontWeight: 'bold',
+    cursor: 'pointer',
   },
 };
 
