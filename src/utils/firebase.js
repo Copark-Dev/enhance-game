@@ -19,7 +19,7 @@ let messaging = null;
 try {
   messaging = getMessaging(app);
 } catch (err) {
-  console.log('FCM not supported in this browser');
+  // FCM not supported in this browser
 }
 
 // FCM 토큰 요청
@@ -29,14 +29,12 @@ export const requestFCMToken = async () => {
   try {
     const permission = await Notification.requestPermission();
     if (permission !== 'granted') {
-      console.log('알림 권한 거부됨');
       return null;
     }
 
     const token = await getToken(messaging, {
       vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY
     });
-    console.log('FCM Token:', token);
     return token;
   } catch (err) {
     console.error('FCM 토큰 요청 실패:', err);

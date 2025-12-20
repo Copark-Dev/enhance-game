@@ -159,7 +159,7 @@ export const AuthProvider = ({ children }) => {
         startUserListener(userId);
       }
     } catch (_err) {
-      console.log('동기화 스킵');
+      // 동기화 스킵
     }
   };
 
@@ -168,7 +168,6 @@ export const AuthProvider = ({ children }) => {
     const kakaoKey = import.meta.env.VITE_KAKAO_JS_KEY;
     if (window.Kakao && !window.Kakao.isInitialized() && kakaoKey) {
       window.Kakao.init(kakaoKey);
-      console.log('Kakao SDK 초기화 완료');
     }
 
     // URL에서 code 확인 (카카오 로그인 후 리다이렉트)
@@ -261,7 +260,7 @@ export const AuthProvider = ({ children }) => {
       const userRef = doc(db, 'users', user.id);
       await updateDoc(userRef, data);
     } catch (err) {
-      console.log('Firestore 업데이트 실패:', err);
+      console.error('Firestore 업데이트 실패:', err);
       // 실패 시 로컬만 업데이트
       const updatedUser = { ...user, ...data };
       setUser(updatedUser);
@@ -652,7 +651,6 @@ export const AuthProvider = ({ children }) => {
       const token = await requestFCMToken();
       if (token) {
         await updateUserData({ fcmToken: token });
-        console.log('FCM 토큰 저장 완료');
         return token;
       }
     } catch (err) {
@@ -664,7 +662,6 @@ export const AuthProvider = ({ children }) => {
   // 포그라운드 알림 설정
   useEffect(() => {
     const unsubscribe = onForegroundMessage((payload) => {
-      console.log('포그라운드 메시지:', payload);
       // 브라우저 알림 표시
       if (Notification.permission === 'granted') {
         new Notification(payload.notification?.title || '강화 시뮬레이터', {
@@ -708,8 +705,6 @@ export const AuthProvider = ({ children }) => {
         timestamp: new Date().toISOString(),
         processed: false
       });
-
-      console.log(`${friendTokens.length}명의 친구에게 알림 전송 예약`);
     } catch (err) {
       console.error('친구 알림 전송 실패:', err);
     }
