@@ -10,13 +10,14 @@ const GuidePanel = ({ isOpen, onClose }) => {
     { icon: '🎁', name: '무료 강화권', desc: '판매 후 15% 확률로 획득', color: '#9C27B0' },
     { icon: '🔥', name: '열정 모드', desc: '연속 3회 실패 시 발동, 성공률 2배', color: '#FF5722' },
     { icon: '🌟', name: '축복', desc: '성공 시 5% 확률로 획득, 다음 하락 방지', color: '#E91E63' },
-    { icon: '💎', name: '잭팟', desc: '노가다 클릭 시 0.1% 확률로 +100,000G', color: '#00BCD4' },
   ];
 
   const mechanics = [
     { label: '하락', desc: '5강부터 실패 시 레벨 하락 가능 (30%~98%)' },
-    { label: '파괴', desc: '8강부터 실패 시 장비 파괴 가능 (3%~95%)' },
-    { label: '보관함', desc: '현재 장비를 보관하고 새로 시작 (최대 5개)' },
+    { label: '파괴', desc: '8강부터 실패 시 영웅 파괴 가능 (3%~95%)' },
+    { label: '보관함', desc: '현재 영웅을 보관하고 새로 시작 (최대 5개)' },
+    { label: '배틀', desc: '다른 유저와 랜덤 매칭으로 배틀, 승리 시 골드 획득' },
+    { label: '스탯', desc: '공격력/체력/속도가 배틀 결과에 영향' },
     { label: '친구', desc: '닉네임 검색으로 친구 추가, 골드 선물 가능' },
   ];
 
@@ -84,7 +85,7 @@ const GuidePanel = ({ isOpen, onClose }) => {
 
           {/* 등급 */}
           <div style={styles.section}>
-            <h3 style={styles.sectionTitle}>🏆 장비 등급</h3>
+            <h3 style={styles.sectionTitle}>🏆 영웅 등급</h3>
             <div style={styles.tierList}>
               {tiers.map((tier, i) => (
                 <div key={i} style={styles.tierItem}>

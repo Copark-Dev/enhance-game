@@ -6,9 +6,25 @@ const AuthContext = createContext();
 
 export const useAuth = () => useContext(AuthContext);
 
+// 오프라인 골드 계산 (시간당 5,000G, 최대 12시간 = 60,000G)
+const calculateOfflineGold = (lastLogin) => {
+  if (!lastLogin) return 0;
+  const lastTime = new Date(lastLogin).getTime();
+  const now = Date.now();
+  const diffHours = (now - lastTime) / (1000 * 60 * 60);
+
+  // 최소 1시간 이상 접속 안했을 때만
+  if (diffHours < 1) return 0;
+
+  // 시간당 5,000G, 최대 12시간
+  const hours = Math.min(diffHours, 12);
+  return Math.floor(hours * 5000);
+};
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [offlineReward, setOfflineReward] = useState(null); // 오프라인 보상 정보
 
   // 🔥 실시간 리스너 해제 함수 저장
   const [unsubscribeUser, setUnsubscribeUser] = useState(null);
@@ -113,6 +129,29 @@ export const AuthProvider = ({ children }) => {
         const firebaseData = userSnap.data();
         const localData = JSON.parse(localStorage.getItem('kakaoUser'));
         const merged = { ...localData, ...firebaseData };
+
+        // 오프라인 골드 계산
+        const offlineGold = calculateOfflineGold(firebaseData.lastLogin);
+        if (offlineGold > 0) {
+          const hoursAway = Math.min(
+            Math.floor((Date.now() - new Date(firebaseData.lastLogin).getTime()) / (1000 * 60 * 60)),
+            12
+          );
+          setOfflineReward({ gold: offlineGold, hours: hoursAway });
+          merged.gold = (merged.gold || 0) + offlineGold;
+
+          // Firebase 업데이트 (골드 추가 + lastLogin 갱신)
+          await updateDoc(userRef, {
+            gold: merged.gold,
+            lastLogin: new Date().toISOString()
+          });
+        } else {
+          // lastLogin만 갱신
+          await updateDoc(userRef, {
+            lastLogin: new Date().toISOString()
+          });
+        }
+
         setUser(merged);
         localStorage.setItem('kakaoUser', JSON.stringify(merged));
 
@@ -646,6 +685,11 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // 오프라인 보상 확인 완료
+  const dismissOfflineReward = () => {
+    setOfflineReward(null);
+  };
+
   // 강화 로그 저장 (실시간 피드용)
   const saveEnhanceLog = async (level, result, previousLevel) => {
     if (!user) return;
@@ -672,7 +716,8 @@ export const AuthProvider = ({ children }) => {
       getGiftNotifications, markGiftNotificationsRead,
       getRankings, claimDailyReward, claimAchievement, updateBattleStats,
       getRandomOpponents, saveBattleNotification, getBattleNotifications, markBattleNotificationsRead,
-      saveFCMToken, notifyFriendsHighEnhance, saveEnhanceLog
+      saveFCMToken, notifyFriendsHighEnhance, saveEnhanceLog,
+      offlineReward, dismissOfflineReward
     }}>
       {children}
     </AuthContext.Provider>
