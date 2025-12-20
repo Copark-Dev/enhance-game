@@ -300,8 +300,33 @@ const BattlePanel = ({
     const won = oppIdx >= oppFighters.length;
     const totalOppLevel = opponentTeam.reduce((sum, h) => sum + h.level, 0);
     const totalMyLevel = myTeam.reduce((sum, h) => sum + h.level, 0);
-    // 보상 대폭 상향: 기본 5000G + 상대팀 레벨당 500G + 내팀 레벨당 200G + 랜덤 5000G
-    const reward = won ? Math.floor(5000 + totalOppLevel * 500 + totalMyLevel * 200 + secureRandom() * 5000) : 0;
+
+    // 레벨 차이에 따른 보상 배율 계산
+    const levelDiff = totalOppLevel - totalMyLevel;
+    let levelMultiplier = 1;
+    if (levelDiff > 20) {
+      // 상대가 훨씬 강함 → 보상 2배
+      levelMultiplier = 2.0;
+    } else if (levelDiff > 10) {
+      // 상대가 강함 → 보상 1.5배
+      levelMultiplier = 1.5;
+    } else if (levelDiff > 0) {
+      // 상대가 약간 강함 → 보상 1.2배
+      levelMultiplier = 1.2;
+    } else if (levelDiff < -20) {
+      // 내가 훨씬 강함 → 보상 30%만
+      levelMultiplier = 0.3;
+    } else if (levelDiff < -10) {
+      // 내가 강함 → 보상 50%
+      levelMultiplier = 0.5;
+    } else if (levelDiff < 0) {
+      // 내가 약간 강함 → 보상 80%
+      levelMultiplier = 0.8;
+    }
+
+    // 보상: 기본 2000G + 상대팀 레벨당 200G + 랜덤 2000G
+    const baseReward = 2000 + totalOppLevel * 200 + secureRandom() * 2000;
+    const reward = won ? Math.floor(baseReward * levelMultiplier) : 0;
 
     const result = {
       won,

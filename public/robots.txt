@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://copark-dev.github.io/enhance-game/sitemap.xml

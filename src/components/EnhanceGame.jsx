@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useEnhance } from '../hooks/useEnhance';
@@ -58,24 +58,43 @@ const EnhanceGame = () => {
   const [isAutoEnhancing, setIsAutoEnhancing] = useState(false);
   const sellRange = SELL_PRICE[level] || { min: 0, max: 0 };
 
-  // 연속 강화 (오토 강화)
+  // 연속 강화를 위한 ref (stale closure 방지)
+  const autoEnhanceRef = useRef({
+    canEnhance, isEnhancing, result, isDestroyed, level, enhance
+  });
+
+  // ref 값 업데이트
+  useEffect(() => {
+    autoEnhanceRef.current = { canEnhance, isEnhancing, result, isDestroyed, level, enhance };
+  }, [canEnhance, isEnhancing, result, isDestroyed, level, enhance]);
+
+  // 연속 강화 (오토 강화) - setInterval 사용
   useEffect(() => {
     if (!isAutoEnhancing) return;
 
-    // 강화 불가능하면 자동으로 중지
-    if (!canEnhance || isDestroyed || level >= MAX_LEVEL) {
-      setIsAutoEnhancing(false);
-      return;
-    }
+    const interval = setInterval(() => {
+      const { canEnhance, isEnhancing, result, isDestroyed, level, enhance } = autoEnhanceRef.current;
 
-    // 강화 중이 아니고, 결과도 없을 때만 다음 강화 시작
-    if (!isEnhancing && !result) {
-      const timer = setTimeout(() => {
+      // 강화 불가능하면 자동으로 중지
+      if (isDestroyed || level >= MAX_LEVEL) {
+        setIsAutoEnhancing(false);
+        return;
+      }
+
+      // 골드 부족하면 중지
+      if (!canEnhance) {
+        setIsAutoEnhancing(false);
+        return;
+      }
+
+      // 강화 중이 아니고, 결과도 없을 때만 다음 강화 시작
+      if (!isEnhancing && !result) {
         enhance();
-      }, 500); // 강화 완료 후 0.5초 대기
-      return () => clearTimeout(timer);
-    }
-  }, [isAutoEnhancing, isEnhancing, result, canEnhance, isDestroyed, level, enhance]);
+      }
+    }, 300); // 300ms마다 체크
+
+    return () => clearInterval(interval);
+  }, [isAutoEnhancing]);
 
   // 파괴되면 오토 강화 중지
   useEffect(() => {
@@ -399,15 +418,15 @@ const EnhanceGame = () => {
                 <motion.button
                   onClick={() => setIsAutoEnhancing(!isAutoEnhancing)}
                   disabled={!canEnhance && !isAutoEnhancing}
-                  whileHover={canEnhance || isAutoEnhancing ? { scale: 1.05 } : {}}
-                  whileTap={canEnhance || isAutoEnhancing ? { scale: 0.95 } : {}}
+                  whileHover={canEnhance || isAutoEnhancing ? { scale: 1.1 } : {}}
+                  whileTap={canEnhance || isAutoEnhancing ? { scale: 0.9 } : {}}
                   style={{
                     ...styles.autoBtn,
                     backgroundColor: isAutoEnhancing ? '#F44336' : '#9C27B0',
                     opacity: !canEnhance && !isAutoEnhancing ? 0.4 : 1,
                     cursor: !canEnhance && !isAutoEnhancing ? 'not-allowed' : 'pointer'
                   }}>
-                  {isAutoEnhancing ? '⏹' : '🔄'}
+                  {isAutoEnhancing ? '⏹️' : '🔄'}
                 </motion.button>
                 <EnhanceButton onClick={enhance} disabled={!canEnhance || isAutoEnhancing} isEnhancing={isEnhancing} isMax={level >= MAX_LEVEL} level={level} />
               </div>
@@ -749,14 +768,18 @@ const styles = {
     whiteSpace: 'nowrap',
   },
   autoBtn: {
-    padding: '12px 14px',
-    fontSize: 16,
+    width: 44,
+    height: 44,
+    fontSize: 18,
     fontWeight: '700',
     color: '#fff',
     border: 'none',
-    borderRadius: 10,
+    borderRadius: '50%',
     boxShadow: '0 4px 15px rgba(156,39,176,0.3)',
-    whiteSpace: 'nowrap',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 0,
   },
   warning: {
     marginTop: 12,

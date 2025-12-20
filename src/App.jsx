@@ -5,6 +5,8 @@ import EnhanceGame from './components/EnhanceGame';
 import AdminPage from './components/AdminPage';
 import LoginPage from './components/LoginPage';
 import AdRewardPage from './components/AdRewardPage';
+import PrivacyPolicy from './components/PrivacyPolicy';
+import Terms from './components/Terms';
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -31,6 +33,8 @@ function AppRoutes() {
       <Route path='/' element={<ProtectedRoute><EnhanceGame /></ProtectedRoute>} />
       <Route path='/admin' element={<ProtectedRoute><AdminPage /></ProtectedRoute>} />
       <Route path='/ad-reward' element={<ProtectedRoute><AdRewardPage /></ProtectedRoute>} />
+      <Route path='/privacy' element={<PrivacyPolicy />} />
+      <Route path='/terms' element={<Terms />} />
     </Routes>
   );
 }
