@@ -183,7 +183,7 @@ export const AuthProvider = ({ children }) => {
         body: new URLSearchParams({
           grant_type: 'authorization_code',
           client_id: import.meta.env.VITE_KAKAO_JS_KEY,
-          redirect_uri: window.location.origin + window.location.pathname,
+          redirect_uri: window.location.origin.replace('http://', 'https://') + window.location.pathname,
           code: code,
         }),
       })
@@ -229,9 +229,10 @@ export const AuthProvider = ({ children }) => {
       return;
     }
     
-    // 현재 페이지 URL을 redirect URI로 사용
-    const redirectUri = window.location.origin + window.location.pathname;
-    
+    // 현재 페이지 URL을 redirect URI로 사용 (HTTPS 강제)
+    const origin = window.location.origin.replace('http://', 'https://');
+    const redirectUri = origin + window.location.pathname;
+
     window.Kakao.Auth.authorize({
       redirectUri: redirectUri,
       scope: 'profile_nickname,profile_image,account_email',
