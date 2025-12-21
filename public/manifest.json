@@ -2,7 +2,7 @@
   "name": "강화 시뮬레이터",
   "short_name": "강화",
   "description": "RPG 스타일 강화 시뮬레이터",
-  "start_url": "/enhance-game/",
+  "start_url": "/",
   "display": "standalone",
   "background_color": "#0a0a1a",
   "theme_color": "#FFD700",
