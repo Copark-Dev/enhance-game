@@ -208,34 +208,42 @@ const ItemDisplay = ({ level, isEnhancing, result, isDestroyed }) => {
 
       {/* 메인 아이템 영역 - 박스 없이 이미지 중심 */}
       <motion.div
-        key={`item-${isEnhancing}`}
-        initial={{ scale: 1, rotate: 0 }}
-        animate={{
-          scale: isEnhancing
-            ? level >= 15
-              ? [1, 1.08, 0.95, 1.05, 0.97, 1.03, 1]
-              : level >= 10
-                ? [1, 1.05, 0.97, 1.03, 1]
-                : [1, 1.03, 0.98, 1.02, 1]
-            : 1,
-          rotate: result === 'fail' || result === 'destroyed'
-            ? level >= 15
-              ? [0, -10, 10, -8, 8, -5, 5, 0]
-              : [0, -5, 5, -3, 3, 0]
-            : isEnhancing && level >= 15
-              ? [0, -2, 2, -1, 1, 0]
-              : 0,
-        }}
-        transition={{
-          scale: {
-            duration: level >= 15 ? 0.4 : level >= 10 ? 0.5 : 0.6,
-            repeat: isEnhancing ? Infinity : 0
-          },
-          rotate: {
-            duration: level >= 15 && isEnhancing ? 0.3 : 0.4,
-            repeat: isEnhancing && level >= 15 ? Infinity : 0
-          },
-        }}
+        animate={
+          isEnhancing
+            ? {
+                scale: level >= 15
+                  ? [1, 1.08, 0.95, 1.05, 0.97, 1.03, 1]
+                  : level >= 10
+                    ? [1, 1.05, 0.97, 1.03, 1]
+                    : [1, 1.03, 0.98, 1.02, 1],
+                rotate: level >= 15 ? [0, -2, 2, -1, 1, 0] : 0,
+              }
+            : result === 'fail' || result === 'destroyed'
+              ? {
+                  scale: 1,
+                  rotate: level >= 15
+                    ? [0, -10, 10, -8, 8, -5, 5, 0]
+                    : [0, -5, 5, -3, 3, 0],
+                }
+              : { scale: 1, rotate: 0 }
+        }
+        transition={
+          isEnhancing
+            ? {
+                scale: {
+                  duration: level >= 15 ? 0.4 : level >= 10 ? 0.5 : 0.6,
+                  repeat: Infinity,
+                },
+                rotate: {
+                  duration: 0.3,
+                  repeat: level >= 15 ? Infinity : 0,
+                },
+              }
+            : {
+                scale: { duration: 0.15 },
+                rotate: { duration: 0.4 },
+              }
+        }
         className="item-box"
         style={{
           position: 'relative',
