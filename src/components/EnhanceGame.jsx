@@ -661,7 +661,8 @@ const styles = {
     paddingRight: 16,
     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
     position: 'relative',
-    overflow: 'hidden',
+    overflowX: 'hidden',
+    overflowY: 'auto',
   },
   centerItem: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1, pointerEvents: 'none' },
   topUI: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, zIndex: 2, width: '100%', maxWidth: 360 },
@@ -817,6 +818,7 @@ const styles = {
   inventoryArea: {
     width: '100%',
     marginTop: 8,
+    marginBottom: 8,
     padding: '12px 16px',
     background: 'rgba(255,255,255,0.03)',
     borderRadius: 14,

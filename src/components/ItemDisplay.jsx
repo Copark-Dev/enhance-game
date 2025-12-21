@@ -208,6 +208,8 @@ const ItemDisplay = ({ level, isEnhancing, result, isDestroyed }) => {
 
       {/* 메인 아이템 영역 - 박스 없이 이미지 중심 */}
       <motion.div
+        key={`item-${isEnhancing}`}
+        initial={{ scale: 1, rotate: 0 }}
         animate={{
           scale: isEnhancing
             ? level >= 15
