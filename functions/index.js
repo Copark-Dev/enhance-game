@@ -911,7 +911,7 @@ exports.secureBattleReward = onCall({ region }, async (request) => {
   }
 
   const userId = request.auth.uid;
-  const { opponentId, won, opponentTotalLevel } = request.data;
+  const { opponentId, won, opponentTotalLevel, myTotalLevel } = request.data;
 
   // 기본 검증
   if (!opponentId || typeof won !== 'boolean' || typeof opponentTotalLevel !== 'number') {
@@ -922,6 +922,10 @@ exports.secureBattleReward = onCall({ region }, async (request) => {
   if (opponentTotalLevel < 0 || opponentTotalLevel > 120) {
     throw new HttpsError('invalid-argument', '유효하지 않은 상대 레벨입니다.');
   }
+
+  // 내 레벨 검증 (옵션, 0~120)
+  const validMyLevel = typeof myTotalLevel === 'number' && myTotalLevel >= 0 && myTotalLevel <= 120
+    ? myTotalLevel : 0;
 
   const BATTLE_COOLDOWN_MS = 10 * 1000; // 10초 쿨다운
 
@@ -968,7 +972,25 @@ exports.secureBattleReward = onCall({ region }, async (request) => {
         // 보상: 기본 2000G + 상대팀 레벨당 200G + 랜덤 2000G
         const randomBonus = secureRandom01() * 2000;
         const baseReward = 2000 + opponentTotalLevel * 200 + randomBonus;
-        reward = Math.floor(baseReward);
+
+        // 레벨 차이에 따른 보상 배율 계산 (클라이언트와 동일)
+        const levelDiff = opponentTotalLevel - validMyLevel;
+        let levelMultiplier = 1;
+        if (levelDiff > 20) {
+          levelMultiplier = 2.0; // 상대가 훨씬 강함
+        } else if (levelDiff > 10) {
+          levelMultiplier = 1.5; // 상대가 강함
+        } else if (levelDiff > 0) {
+          levelMultiplier = 1.2; // 상대가 약간 강함
+        } else if (levelDiff < -20) {
+          levelMultiplier = 0.3; // 내가 훨씬 강함
+        } else if (levelDiff < -10) {
+          levelMultiplier = 0.5; // 내가 강함
+        } else if (levelDiff < 0) {
+          levelMultiplier = 0.8; // 내가 약간 강함
+        }
+
+        reward = Math.floor(baseReward * levelMultiplier);
 
         // 최대 보상 제한 (100,000G)
         reward = Math.min(reward, 100000);

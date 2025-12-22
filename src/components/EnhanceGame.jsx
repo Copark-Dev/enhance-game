@@ -553,7 +553,8 @@ const EnhanceGame = () => {
         onBattle={async (result) => {
           // 보안: Cloud Function으로 배틀 보상 처리
           const opponentTotalLevel = result.oppTeamLevels?.reduce((sum, l) => sum + l, 0) || 0;
-          const battleResult = await updateBattleStats(result.won, result.opponentId, opponentTotalLevel);
+          const myTotalLevel = result.myTeamLevels?.reduce((sum, l) => sum + l, 0) || 0;
+          const battleResult = await updateBattleStats(result.won, result.opponentId, opponentTotalLevel, myTotalLevel);
           // 서버에서 보상이 처리되면 onSnapshot으로 UI 자동 업데이트
           if (battleResult.error) {
             alert(battleResult.error);

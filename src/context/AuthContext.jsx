@@ -400,13 +400,14 @@ export const AuthProvider = ({ children }) => {
   };
 
   // 배틀 결과 업데이트 (보안: Cloud Function 사용)
-  const updateBattleStats = async (won, opponentId, opponentTotalLevel) => {
+  const updateBattleStats = async (won, opponentId, opponentTotalLevel, myTotalLevel) => {
     if (!user) return { success: false, reward: 0 };
     try {
       const result = await secureBattleRewardFn({
         opponentId,
         won,
-        opponentTotalLevel
+        opponentTotalLevel,
+        myTotalLevel
       });
       // 성공 시 서버에서 골드와 배틀 스탯이 업데이트됨
       // onSnapshot 리스너가 자동으로 UI 업데이트
