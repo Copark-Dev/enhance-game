@@ -194,17 +194,18 @@ const EnhanceGame = () => {
     }
   }, [user]);
 
-  // 🔒 보관함과 버프만 클라이언트에서 저장 (gold/level/stats는 서버에서만 관리)
+  // 🔒 보관함 및 관련 상태 저장 (gold/stats는 서버에서만 관리)
   useEffect(() => {
     if (user && !isEnhancing) {
       const saveTimeout = setTimeout(() => {
-        // 보안: gold, level, stats, itemStats는 Cloud Functions에서만 업데이트됨
-        // 클라이언트는 보관함과 파괴 상태만 저장
-        updateUserData({ inventory, isDestroyed });
+        // 보안: gold, stats는 Cloud Functions에서만 업데이트됨
+        // 클라이언트는 보관함, 현재 아이템(level/itemStats), 파괴 상태를 저장
+        // level/itemStats는 inventory 교체 작업 때문에 같이 저장해야 함
+        updateUserData({ inventory, level, itemStats, isDestroyed });
       }, 1000);
       return () => clearTimeout(saveTimeout);
     }
-  }, [inventory, isDestroyed, isEnhancing]);
+  }, [inventory, level, itemStats, isDestroyed, isEnhancing]);
 
   // 이벤트 메시지
   const eventMessages = {

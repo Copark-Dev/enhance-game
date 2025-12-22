@@ -903,7 +903,69 @@ exports.secureClaimAchievement = onCall({ region }, async (request) => {
 });
 
 // ============================================
-// 보안 배틀 보상 함수 (Callable)
+// 배틀 유틸리티 함수
+// ============================================
+
+// 팀 전투력 계산 (서버용)
+const calculateTeamPower = (level, itemStats, inventory) => {
+  let totalPower = 0;
+
+  // 현재 아이템 전투력
+  if (level > 0) {
+    const attack = itemStats?.attack || level * 50;
+    const hp = itemStats?.hp || level * 100;
+    totalPower += attack + hp * 0.5;
+  }
+
+  // 인벤토리 아이템 전투력
+  if (inventory && Array.isArray(inventory)) {
+    for (const item of inventory) {
+      if (item && item.level > 0) {
+        const attack = item.attack || item.level * 50;
+        const hp = item.hp || item.level * 100;
+        totalPower += attack + hp * 0.5;
+      }
+    }
+  }
+
+  return totalPower;
+};
+
+// 팀 총 레벨 계산
+const calculateTeamTotalLevel = (level, inventory) => {
+  let totalLevel = level > 0 ? level : 0;
+
+  if (inventory && Array.isArray(inventory)) {
+    for (const item of inventory) {
+      if (item && item.level > 0) {
+        totalLevel += item.level;
+      }
+    }
+  }
+
+  return totalLevel;
+};
+
+// 서버에서 배틀 결과 결정 (전투력 기반 확률)
+const simulateBattle = (myPower, oppPower) => {
+  const totalPower = myPower + oppPower;
+  if (totalPower === 0) {
+    return secureRandom01() < 0.5; // 둘 다 0이면 50:50
+  }
+
+  // 전투력 비율로 승률 계산 (최소 10%, 최대 90%)
+  let winChance = myPower / totalPower;
+  winChance = Math.max(0.1, Math.min(0.9, winChance));
+
+  // 약간의 추가 랜덤성 (±10%)
+  winChance += (secureRandom01() - 0.5) * 0.2;
+  winChance = Math.max(0.05, Math.min(0.95, winChance));
+
+  return secureRandom01() < winChance;
+};
+
+// ============================================
+// 보안 배틀 보상 함수 (Callable) - 서버 검증 버전
 // ============================================
 exports.secureBattleReward = onCall({ region }, async (request) => {
   if (!request.auth) {
@@ -911,21 +973,12 @@ exports.secureBattleReward = onCall({ region }, async (request) => {
   }
 
   const userId = request.auth.uid;
-  const { opponentId, won, opponentTotalLevel, myTotalLevel } = request.data;
+  const { opponentId } = request.data;
 
   // 기본 검증
-  if (!opponentId || typeof won !== 'boolean' || typeof opponentTotalLevel !== 'number') {
-    throw new HttpsError('invalid-argument', '유효하지 않은 배틀 데이터입니다.');
+  if (!opponentId) {
+    throw new HttpsError('invalid-argument', '상대 ID가 필요합니다.');
   }
-
-  // 레벨 합 제한 (최대 6명 × 20레벨 = 120)
-  if (opponentTotalLevel < 0 || opponentTotalLevel > 120) {
-    throw new HttpsError('invalid-argument', '유효하지 않은 상대 레벨입니다.');
-  }
-
-  // 내 레벨 검증 (옵션, 0~120)
-  const validMyLevel = typeof myTotalLevel === 'number' && myTotalLevel >= 0 && myTotalLevel <= 120
-    ? myTotalLevel : 0;
 
   const BATTLE_COOLDOWN_MS = 10 * 1000; // 10초 쿨다운
 
@@ -946,6 +999,7 @@ exports.secureBattleReward = onCall({ region }, async (request) => {
       }
 
       const userData = userDoc.data();
+      const opponentData = opponentDoc.data();
       const lastBattleTime = userData.lastBattleTime || 0;
       const now = Date.now();
 
@@ -959,6 +1013,25 @@ exports.secureBattleReward = onCall({ region }, async (request) => {
         throw new HttpsError('invalid-argument', '자신과 배틀할 수 없습니다.');
       }
 
+      // 서버에서 실제 팀 데이터로 전투력 계산
+      const myPower = calculateTeamPower(
+        userData.level || 0,
+        userData.itemStats,
+        userData.inventory
+      );
+      const oppPower = calculateTeamPower(
+        opponentData.level || 0,
+        opponentData.itemStats,
+        opponentData.inventory
+      );
+
+      // 서버에서 실제 레벨 계산
+      const myTotalLevel = calculateTeamTotalLevel(userData.level || 0, userData.inventory);
+      const oppTotalLevel = calculateTeamTotalLevel(opponentData.level || 0, opponentData.inventory);
+
+      // 서버에서 배틀 결과 결정
+      const won = simulateBattle(myPower, oppPower);
+
       // 배틀 스탯 업데이트
       const battleStats = userData.battleStats || { battles: 0, wins: 0 };
       const newBattleStats = {
@@ -966,33 +1039,31 @@ exports.secureBattleReward = onCall({ region }, async (request) => {
         wins: battleStats.wins + (won ? 1 : 0)
       };
 
-      // 승리 시 보상 계산 (서버에서 계산)
+      // 승리 시 보상 계산
       let reward = 0;
       if (won) {
         // 보상: 기본 2000G + 상대팀 레벨당 200G + 랜덤 2000G
         const randomBonus = secureRandom01() * 2000;
-        const baseReward = 2000 + opponentTotalLevel * 200 + randomBonus;
+        const baseReward = 2000 + oppTotalLevel * 200 + randomBonus;
 
-        // 레벨 차이에 따른 보상 배율 계산 (클라이언트와 동일)
-        const levelDiff = opponentTotalLevel - validMyLevel;
+        // 레벨 차이에 따른 보상 배율 계산
+        const levelDiff = oppTotalLevel - myTotalLevel;
         let levelMultiplier = 1;
         if (levelDiff > 20) {
-          levelMultiplier = 2.0; // 상대가 훨씬 강함
+          levelMultiplier = 2.0;
         } else if (levelDiff > 10) {
-          levelMultiplier = 1.5; // 상대가 강함
+          levelMultiplier = 1.5;
         } else if (levelDiff > 0) {
-          levelMultiplier = 1.2; // 상대가 약간 강함
+          levelMultiplier = 1.2;
         } else if (levelDiff < -20) {
-          levelMultiplier = 0.3; // 내가 훨씬 강함
+          levelMultiplier = 0.3;
         } else if (levelDiff < -10) {
-          levelMultiplier = 0.5; // 내가 강함
+          levelMultiplier = 0.5;
         } else if (levelDiff < 0) {
-          levelMultiplier = 0.8; // 내가 약간 강함
+          levelMultiplier = 0.8;
         }
 
         reward = Math.floor(baseReward * levelMultiplier);
-
-        // 최대 보상 제한 (100,000G)
         reward = Math.min(reward, 100000);
       }
 
@@ -1009,7 +1080,12 @@ exports.secureBattleReward = onCall({ region }, async (request) => {
         won,
         reward,
         newGold,
-        newBattleStats
+        newBattleStats,
+        // 디버깅/UI용 추가 정보
+        myTotalLevel,
+        oppTotalLevel,
+        myPower: Math.floor(myPower),
+        oppPower: Math.floor(oppPower)
       };
     });
 

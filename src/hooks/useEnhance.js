@@ -96,10 +96,8 @@ export const useEnhance = (initialLevel = 0, initialGold = 50000) => {
 
       const data = serverResult.data;
 
-      // 서버 응답으로 상태 업데이트
-      setLevel(data.level);
+      // 골드, 스탯, 버프는 즉시 업데이트 (이미지에 영향 없음)
       setGold(data.gold);
-      setItemStats(data.itemStats);
       setStats(data.stats);
       setBuffs(data.buffs);
       setLastRoll(data.roll);
@@ -116,15 +114,27 @@ export const useEnhance = (initialLevel = 0, initialGold = 50000) => {
         setResult('success');
         playSuccess(data.level);
 
+        // 성공 후 잠시 대기 후 레벨/이미지 업데이트 (스포일러 방지)
+        setTimeout(() => {
+          setLevel(data.level);
+          setItemStats(data.itemStats);
+        }, 300);
+
         // 축복 획득 체크
         if (data.buffs.blessing && !buffs.blessing) {
           setTimeout(() => triggerEvent('blessing'), 500);
         }
         setFailStreak(0);
       } else if (data.result === 'destroyed') {
-        setIsDestroyed(true);
         setResult('destroyed');
         playDestroyed();
+
+        // 파괴 후 잠시 대기 후 상태 업데이트
+        setTimeout(() => {
+          setIsDestroyed(true);
+          setLevel(data.level);
+          setItemStats(data.itemStats);
+        }, 300);
 
         // 보호막 획득 체크
         if (data.buffs.shield && !buffs.shield) {
@@ -134,15 +144,31 @@ export const useEnhance = (initialLevel = 0, initialGold = 50000) => {
         triggerEvent('shieldUsed');
         setResult('fail');
         playFail();
+        // 레벨 변화 없음
       } else if (data.result === 'blessingUsed') {
         triggerEvent('blessingUsed');
         setResult('fail');
         playFail();
-      } else if (data.result === 'downgrade' || data.result === 'fail') {
+        // 레벨 변화 없음
+      } else if (data.result === 'downgrade') {
         setResult('fail');
         playFail();
 
+        // 하락 후 잠시 대기 후 레벨 업데이트
+        setTimeout(() => {
+          setLevel(data.level);
+          setItemStats(data.itemStats);
+        }, 300);
+
         // 열정 모드 체크
+        if (data.buffs.passion && !buffs.passion) {
+          setTimeout(() => triggerEvent('passion'), 500);
+        }
+      } else {
+        // 단순 실패 (레벨 변화 없음)
+        setResult('fail');
+        playFail();
+
         if (data.buffs.passion && !buffs.passion) {
           setTimeout(() => triggerEvent('passion'), 500);
         }
