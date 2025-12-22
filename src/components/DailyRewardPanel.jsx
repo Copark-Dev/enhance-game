@@ -68,12 +68,11 @@ const DailyRewardPanel = ({ isOpen, onClose, user, onClaimReward }) => {
     return () => clearInterval(interval);
   }, [user, isOpen]);
 
-  // 연속 출석 보상 계산
+  // 연속 출석 보상 계산 (Cloud Function과 동일한 값 사용)
+  const DAILY_REWARDS = [5000, 7000, 10000, 15000, 20000, 30000, 50000];
   const getRewardAmount = (currentStreak) => {
-    if (currentStreak >= 7) return 100000; // 7일 연속 특별 보상
-    const baseReward = 10000;
-    const streakBonus = Math.min(currentStreak - 1, 6) * 3000; // 일당 +3000
-    return baseReward + streakBonus;
+    const index = Math.min(currentStreak - 1, 6); // 0~6 인덱스
+    return DAILY_REWARDS[index] || DAILY_REWARDS[6];
   };
 
   const handleClaim = async () => {
@@ -103,14 +102,15 @@ const DailyRewardPanel = ({ isOpen, onClose, user, onClaimReward }) => {
 
   if (!isOpen) return null;
 
+  // Cloud Function의 DAILY_REWARDS와 동일한 값 사용
   const rewards = [
-    { day: 1, gold: 10000 },
-    { day: 2, gold: 13000 },
-    { day: 3, gold: 16000 },
-    { day: 4, gold: 19000 },
-    { day: 5, gold: 22000 },
-    { day: 6, gold: 25000 },
-    { day: 7, gold: 100000, special: true },
+    { day: 1, gold: 5000 },
+    { day: 2, gold: 7000 },
+    { day: 3, gold: 10000 },
+    { day: 4, gold: 15000 },
+    { day: 5, gold: 20000 },
+    { day: 6, gold: 30000 },
+    { day: 7, gold: 50000, special: true },
   ];
 
   return (

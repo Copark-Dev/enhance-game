@@ -29,10 +29,12 @@ service cloud.firestore {
         && stats.maxLevel is number && stats.maxLevel >= 0 && stats.maxLevel <= 20;
     }
 
-    // 골드 변화량 제한 (한 번에 최대 1억 변화 - 고강 판매 고려)
+    // 골드 변화량 제한 (클라이언트에서는 업적/배틀 보상만 처리)
+    // Cloud Functions는 admin SDK로 이 규칙을 우회하므로 판매 등 큰 금액은 서버에서 처리
     function isReasonableGoldChange(before, after) {
       let diff = after - before;
-      return diff >= -100000000 && diff <= 1000000000;
+      // 클라이언트: 최대 +1000만 (업적/배틀용), -1억 (강화 비용 등은 서버에서)
+      return diff >= -100000000 && diff <= 10000000;
     }
 
     // ============================================

@@ -194,15 +194,17 @@ const EnhanceGame = () => {
     }
   }, [user]);
 
-  // 데이터 변경시 Firebase 저장
+  // 🔒 보관함과 버프만 클라이언트에서 저장 (gold/level/stats는 서버에서만 관리)
   useEffect(() => {
     if (user && !isEnhancing) {
       const saveTimeout = setTimeout(() => {
-        updateUserData({ gold, stats, level, inventory, buffs, itemStats, isDestroyed });
+        // 보안: gold, level, stats, itemStats는 Cloud Functions에서만 업데이트됨
+        // 클라이언트는 보관함과 파괴 상태만 저장
+        updateUserData({ inventory, isDestroyed });
       }, 1000);
       return () => clearTimeout(saveTimeout);
     }
-  }, [gold, stats, level, inventory, buffs, itemStats, isDestroyed, isEnhancing]);
+  }, [inventory, isDestroyed, isEnhancing]);
 
   // 이벤트 메시지
   const eventMessages = {
@@ -511,8 +513,9 @@ const EnhanceGame = () => {
         onClose={() => setShowDailyReward(false)}
         user={user}
         onClaimReward={(reward, streak) => {
+          // 서버(Cloud Function)에서 골드가 이미 추가됨
+          // onSnapshot 리스너가 자동으로 UI 업데이트
           claimDailyReward(reward, streak);
-          setGold(g => g + reward);
         }}
       />
       <AchievementPanel
@@ -521,8 +524,9 @@ const EnhanceGame = () => {
         stats={{ ...stats, battles: user?.battleStats?.battles || 0, wins: user?.battleStats?.wins || 0 }}
         claimedAchievements={user?.claimedAchievements || []}
         onClaimAchievement={(id, reward) => {
+          // 서버(Cloud Function)에서 골드가 이미 추가됨
+          // onSnapshot 리스너가 자동으로 UI 업데이트
           claimAchievement(id, reward);
-          setGold(g => g + reward);
         }}
       />
       <RankingPanel
@@ -546,10 +550,13 @@ const EnhanceGame = () => {
         currentItem={{ level, attack: itemStats.attack, hp: itemStats.hp, speed: itemStats.speed || 0 }}
         getRandomOpponents={getRandomOpponents}
         saveBattleNotification={saveBattleNotification}
-        onBattle={(result) => {
-          updateBattleStats(result.won, result.reward);
-          if (result.won) {
-            setGold(g => g + result.reward);
+        onBattle={async (result) => {
+          // 보안: Cloud Function으로 배틀 보상 처리
+          const opponentTotalLevel = result.oppTeamLevels?.reduce((sum, l) => sum + l, 0) || 0;
+          const battleResult = await updateBattleStats(result.won, result.opponentId, opponentTotalLevel);
+          // 서버에서 보상이 처리되면 onSnapshot으로 UI 자동 업데이트
+          if (battleResult.error) {
+            alert(battleResult.error);
           }
         }}
       />

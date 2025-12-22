@@ -45,6 +45,12 @@ export const secureClaimDailyReward = httpsCallable(functions, 'secureClaimDaily
 // 보안 광고 보상
 export const secureAdReward = httpsCallable(functions, 'secureAdReward');
 
+// 보안 업적 보상
+export const secureClaimAchievement = httpsCallable(functions, 'secureClaimAchievement');
+
+// 보안 배틀 보상
+export const secureBattleReward = httpsCallable(functions, 'secureBattleReward');
+
 // ============================================
 // Firebase Auth 함수들
 // ============================================

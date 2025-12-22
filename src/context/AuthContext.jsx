@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
-import { db, requestFCMToken, onForegroundMessage, verifyKakaoToken, signInWithFirebase, signOutFirebase, onAuthChange, secureSendGold as secureSendGoldFn } from '../utils/firebase';
+import { db, requestFCMToken, onForegroundMessage, verifyKakaoToken, signInWithFirebase, signOutFirebase, onAuthChange, secureSendGold as secureSendGoldFn, secureClaimAchievement as secureClaimAchievementFn, secureBattleReward as secureBattleRewardFn } from '../utils/firebase';
 import { doc, getDoc, setDoc, updateDoc, collection, query, where, getDocs, orderBy, limit, onSnapshot } from 'firebase/firestore';
 
 const AuthContext = createContext();
@@ -385,18 +385,13 @@ export const AuthProvider = ({ children }) => {
     return true;
   };
 
-  // 업적 보상 수령
+  // 업적 보상 수령 (보안: Cloud Function 사용)
   const claimAchievement = async (achievementId, reward) => {
     if (!user) return false;
     try {
-      const claimedAchievements = user.claimedAchievements || [];
-      if (claimedAchievements.includes(achievementId)) return false;
-
-      const newGold = (user.gold || 0) + reward;
-      await updateUserData({
-        gold: newGold,
-        claimedAchievements: [...claimedAchievements, achievementId]
-      });
+      const result = await secureClaimAchievementFn({ achievementId });
+      // 성공 시 서버에서 골드와 업적 목록이 업데이트됨
+      // onSnapshot 리스너가 자동으로 UI 업데이트
       return true;
     } catch (err) {
       console.error('업적 보상 수령 실패:', err);
@@ -404,24 +399,25 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // 배틀 결과 업데이트
-  const updateBattleStats = async (won, reward) => {
-    if (!user) return false;
+  // 배틀 결과 업데이트 (보안: Cloud Function 사용)
+  const updateBattleStats = async (won, opponentId, opponentTotalLevel) => {
+    if (!user) return { success: false, reward: 0 };
     try {
-      const battleStats = user.battleStats || { battles: 0, wins: 0 };
-      const newBattleStats = {
-        battles: battleStats.battles + 1,
-        wins: battleStats.wins + (won ? 1 : 0)
-      };
-      const newGold = won ? (user.gold || 0) + reward : user.gold;
-      await updateUserData({
-        gold: newGold,
-        battleStats: newBattleStats
+      const result = await secureBattleRewardFn({
+        opponentId,
+        won,
+        opponentTotalLevel
       });
-      return true;
+      // 성공 시 서버에서 골드와 배틀 스탯이 업데이트됨
+      // onSnapshot 리스너가 자동으로 UI 업데이트
+      return { success: true, reward: result.data.reward };
     } catch (err) {
       console.error('배틀 결과 업데이트 실패:', err);
-      return false;
+      // 쿨다운 에러 처리
+      if (err.code === 'functions/resource-exhausted') {
+        return { success: false, error: '배틀 쿨다운 중입니다.', reward: 0 };
+      }
+      return { success: false, reward: 0 };
     }
   };
 

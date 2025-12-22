@@ -131,58 +131,84 @@ const MAX_GOLD = 999999999; // 최대 골드 한도
 const MIN_GOLD = 0;
 const RATE_LIMIT_MS = 500; // 강화 간 최소 간격 (500ms)
 
-// 강화 확률 테이블 (서버에서만 관리)
-const SUCCESS_RATES = {
-  0: 95, 1: 90, 2: 85, 3: 80, 4: 75, 5: 70,
-  6: 65, 7: 60, 8: 55, 9: 50, 10: 45, 11: 40,
-  12: 35, 13: 30, 14: 25, 15: 20, 16: 15, 17: 10,
-  18: 7, 19: 5, 20: 3
+// 기본 강화 확률 테이블 (Firestore 설정이 없을 때 사용)
+const DEFAULT_SUCCESS_RATES = {
+  0: 100, 1: 85, 2: 80, 3: 70, 4: 60,
+  5: 50, 6: 40, 7: 35, 8: 30, 9: 25,
+  10: 20, 11: 15, 12: 10, 13: 7, 14: 5,
+  15: 3, 16: 1.5, 17: 0.7, 18: 0.3, 19: 0.1, 20: 0.05
 };
 
-const DOWNGRADE_RATES = {
-  0: 0, 1: 0, 2: 15, 3: 20, 4: 25, 5: 30,
-  6: 40, 7: 50, 8: 60, 9: 70, 10: 80, 11: 85,
-  12: 90, 13: 95, 14: 100, 15: 100, 16: 100, 17: 100,
-  18: 100, 19: 100, 20: 100
+const DEFAULT_DOWNGRADE_RATES = {
+  0: 0, 1: 0, 2: 0, 3: 0, 4: 0,
+  5: 30, 6: 35, 7: 40, 8: 45, 9: 50,
+  10: 55, 11: 60, 12: 65, 13: 70, 14: 75,
+  15: 80, 16: 85, 17: 90, 18: 92, 19: 95, 20: 98
 };
 
-const DESTROY_RATES = {
-  0: 0, 1: 0, 2: 0, 3: 0.5, 4: 1, 5: 1.5,
-  6: 2, 7: 3, 8: 4, 9: 5, 10: 7, 11: 10,
-  12: 14, 13: 18, 14: 22, 15: 28, 16: 35, 17: 42,
-  18: 50, 19: 60, 20: 70
+const DEFAULT_DESTROY_RATES = {
+  0: 0, 1: 0, 2: 0, 3: 0, 4: 0,
+  5: 0, 6: 0, 7: 0, 8: 3, 9: 5,
+  10: 8, 11: 12, 12: 18, 13: 25, 14: 35,
+  15: 45, 16: 55, 17: 65, 18: 75, 19: 85, 20: 95
 };
 
-const ENHANCE_COST = {
-  0: 100, 1: 200, 2: 400, 3: 800, 4: 1500, 5: 3000,
-  6: 6000, 7: 12000, 8: 25000, 9: 50000, 10: 100000,
-  11: 200000, 12: 400000, 13: 800000, 14: 1500000,
-  15: 3000000, 16: 5000000, 17: 8000000, 18: 12000000,
-  19: 18000000, 20: 25000000
+const DEFAULT_ENHANCE_COST = {
+  0: 50, 1: 100, 2: 150, 3: 250, 4: 400,
+  5: 700, 6: 1200, 7: 2000, 8: 4000, 9: 7000,
+  10: 12000, 11: 22000, 12: 40000, 13: 70000, 14: 120000,
+  15: 200000, 16: 350000, 17: 600000, 18: 1000000, 19: 1800000, 20: 3000000
 };
 
-const SELL_PRICE = {
-  0: { min: 0, max: 0 },
-  1: { min: 50, max: 150 },
-  2: { min: 150, max: 400 },
-  3: { min: 400, max: 1000 },
-  4: { min: 1000, max: 2500 },
-  5: { min: 2500, max: 6000 },
-  6: { min: 6000, max: 15000 },
-  7: { min: 15000, max: 35000 },
-  8: { min: 35000, max: 80000 },
-  9: { min: 80000, max: 180000 },
-  10: { min: 180000, max: 400000 },
-  11: { min: 400000, max: 900000 },
-  12: { min: 900000, max: 2000000 },
-  13: { min: 2000000, max: 4500000 },
-  14: { min: 4500000, max: 10000000 },
-  15: { min: 10000000, max: 22000000 },
-  16: { min: 22000000, max: 48000000 },
-  17: { min: 48000000, max: 100000000 },
-  18: { min: 100000000, max: 200000000 },
-  19: { min: 200000000, max: 400000000 },
-  20: { min: 400000000, max: 800000000 }
+const DEFAULT_SELL_PRICE = {
+  0: { min: 25, max: 40 },
+  1: { min: 60, max: 85 },
+  2: { min: 140, max: 200 },
+  3: { min: 280, max: 400 },
+  4: { min: 500, max: 720 },
+  5: { min: 900, max: 1300 },
+  6: { min: 1600, max: 2300 },
+  7: { min: 2800, max: 4000 },
+  8: { min: 5000, max: 7200 },
+  9: { min: 10000, max: 14000 },
+  10: { min: 20000, max: 28000 },
+  11: { min: 45000, max: 65000 },
+  12: { min: 120000, max: 170000 },
+  13: { min: 250000, max: 350000 },
+  14: { min: 480000, max: 680000 },
+  15: { min: 900000, max: 1300000 },
+  16: { min: 1800000, max: 2500000 },
+  17: { min: 3500000, max: 5000000 },
+  18: { min: 7000000, max: 10000000 },
+  19: { min: 14000000, max: 20000000 },
+  20: { min: 35000000, max: 50000000 }
+};
+
+// Firestore에서 설정 불러오기
+const getEnhanceSettings = async () => {
+  try {
+    const settingsRef = db.collection('settings').doc('enhance');
+    const snapshot = await settingsRef.get();
+    if (snapshot.exists) {
+      const data = snapshot.data();
+      return {
+        successRates: data.successRates || DEFAULT_SUCCESS_RATES,
+        downgradeRates: data.downgradeRates || DEFAULT_DOWNGRADE_RATES,
+        destroyRates: data.destroyRates || DEFAULT_DESTROY_RATES,
+        enhanceCosts: data.enhanceCosts || DEFAULT_ENHANCE_COST,
+        sellPrices: data.sellPrices || DEFAULT_SELL_PRICE
+      };
+    }
+  } catch (err) {
+    console.error('설정 불러오기 실패:', err);
+  }
+  return {
+    successRates: DEFAULT_SUCCESS_RATES,
+    downgradeRates: DEFAULT_DOWNGRADE_RATES,
+    destroyRates: DEFAULT_DESTROY_RATES,
+    enhanceCosts: DEFAULT_ENHANCE_COST,
+    sellPrices: DEFAULT_SELL_PRICE
+  };
 };
 
 // ============================================
@@ -252,6 +278,9 @@ exports.secureEnhance = onCall({ region }, async (request) => {
   const userId = request.auth.uid;
   const userRef = db.collection('users').doc(userId);
 
+  // Firestore에서 설정 불러오기 (트랜잭션 전에)
+  const settings = await getEnhanceSettings();
+
   try {
     const result = await db.runTransaction(async (transaction) => {
       const userDoc = await transaction.get(userRef);
@@ -284,17 +313,17 @@ exports.secureEnhance = onCall({ region }, async (request) => {
         throw new HttpsError('failed-precondition', '최대 레벨입니다.');
       }
 
-      // 비용 계산
-      const enhanceCost = buffs.freeEnhance ? 0 : (ENHANCE_COST[currentLevel] || 100);
+      // 비용 계산 (Firestore 설정 사용)
+      const enhanceCost = buffs.freeEnhance ? 0 : (settings.enhanceCosts[currentLevel] || 100);
 
       // 골드 체크
       if (currentGold < enhanceCost) {
         throw new HttpsError('failed-precondition', '골드가 부족합니다.');
       }
 
-      // 강화 로직 실행
+      // 강화 로직 실행 (Firestore 설정 사용)
       const roll = secureRandom();
-      const baseSuccessRate = SUCCESS_RATES[currentLevel] || 1;
+      const baseSuccessRate = settings.successRates[currentLevel] || 1;
       const successRate = buffs.passion ? Math.min(baseSuccessRate * 2, 100) : baseSuccessRate;
       const isSuccess = roll < successRate;
 
@@ -346,7 +375,7 @@ exports.secureEnhance = onCall({ region }, async (request) => {
         // 실패
         newStats.failures = stats.failures + 1;
         const destroyRoll = secureRandom();
-        const destroyRate = DESTROY_RATES[currentLevel] || 0;
+        const destroyRate = settings.destroyRates[currentLevel] || 0;
 
         if (destroyRoll < destroyRate) {
           // 파괴
@@ -366,7 +395,7 @@ exports.secureEnhance = onCall({ region }, async (request) => {
         } else {
           // 하락 체크
           const downgradeRoll = secureRandom();
-          const downgradeRate = DOWNGRADE_RATES[currentLevel] || 0;
+          const downgradeRate = settings.downgradeRates[currentLevel] || 0;
 
           if (downgradeRoll < downgradeRate && currentLevel > 0) {
             if (buffs.blessing) {
@@ -448,6 +477,9 @@ exports.secureSell = onCall({ region }, async (request) => {
   const userId = request.auth.uid;
   const userRef = db.collection('users').doc(userId);
 
+  // Firestore에서 설정 불러오기 (트랜잭션 전에)
+  const settings = await getEnhanceSettings();
+
   try {
     const result = await db.runTransaction(async (transaction) => {
       const userDoc = await transaction.get(userRef);
@@ -467,8 +499,8 @@ exports.secureSell = onCall({ region }, async (request) => {
         throw new HttpsError('failed-precondition', '판매할 아이템이 없습니다.');
       }
 
-      // 판매가 계산
-      const priceRange = SELL_PRICE[currentLevel] || { min: 0, max: 0 };
+      // 판매가 계산 (Firestore 설정 사용)
+      const priceRange = settings.sellPrices[currentLevel] || { min: 0, max: 0 };
       let price = priceRange.min + Math.floor(secureRandom01() * (priceRange.max - priceRange.min));
 
       // 스탯 보너스
@@ -739,6 +771,233 @@ exports.secureAdReward = onCall({ region }, async (request) => {
       throw error;
     }
     throw new HttpsError('internal', '보상 처리 중 오류가 발생했습니다.');
+  }
+});
+
+// ============================================
+// 보안 업적 보상 함수 (Callable)
+// ============================================
+const ACHIEVEMENTS = {
+  // 강화 시도
+  'first_enhance': { condition: (s) => s.attempts >= 1, reward: 500 },
+  'enhance_10': { condition: (s) => s.attempts >= 10, reward: 1000 },
+  'enhance_50': { condition: (s) => s.attempts >= 50, reward: 2500 },
+  'enhance_100': { condition: (s) => s.attempts >= 100, reward: 5000 },
+  'enhance_300': { condition: (s) => s.attempts >= 300, reward: 15000 },
+  'enhance_500': { condition: (s) => s.attempts >= 500, reward: 25000 },
+  'enhance_1000': { condition: (s) => s.attempts >= 1000, reward: 50000 },
+  'enhance_5000': { condition: (s) => s.attempts >= 5000, reward: 200000 },
+  // 성공 횟수
+  'success_5': { condition: (s) => s.successes >= 5, reward: 1000 },
+  'success_10': { condition: (s) => s.successes >= 10, reward: 2000 },
+  'success_30': { condition: (s) => s.successes >= 30, reward: 5000 },
+  'success_50': { condition: (s) => s.successes >= 50, reward: 10000 },
+  'success_100': { condition: (s) => s.successes >= 100, reward: 20000 },
+  'success_300': { condition: (s) => s.successes >= 300, reward: 60000 },
+  'success_500': { condition: (s) => s.successes >= 500, reward: 100000 },
+  // 레벨 달성
+  'level_1': { condition: (s) => s.maxLevel >= 1, reward: 500 },
+  'level_3': { condition: (s) => s.maxLevel >= 3, reward: 1000 },
+  'level_5': { condition: (s) => s.maxLevel >= 5, reward: 3000 },
+  'level_7': { condition: (s) => s.maxLevel >= 7, reward: 5000 },
+  'level_10': { condition: (s) => s.maxLevel >= 10, reward: 10000 },
+  'level_12': { condition: (s) => s.maxLevel >= 12, reward: 30000 },
+  'level_15': { condition: (s) => s.maxLevel >= 15, reward: 100000 },
+  'level_17': { condition: (s) => s.maxLevel >= 17, reward: 300000 },
+  'level_19': { condition: (s) => s.maxLevel >= 19, reward: 500000 },
+  'level_20': { condition: (s) => s.maxLevel >= 20, reward: 1000000 },
+  // 수익 관련
+  'earn_10k': { condition: (s) => s.totalEarned >= 10000, reward: 1000 },
+  'earn_50k': { condition: (s) => s.totalEarned >= 50000, reward: 3000 },
+  'earn_100k': { condition: (s) => s.totalEarned >= 100000, reward: 5000 },
+  'earn_500k': { condition: (s) => s.totalEarned >= 500000, reward: 25000 },
+  'earn_1m': { condition: (s) => s.totalEarned >= 1000000, reward: 50000 },
+  'earn_5m': { condition: (s) => s.totalEarned >= 5000000, reward: 250000 },
+  'earn_10m': { condition: (s) => s.totalEarned >= 10000000, reward: 500000 },
+  'earn_50m': { condition: (s) => s.totalEarned >= 50000000, reward: 2000000 },
+  // 실패/파괴
+  'fail_10': { condition: (s) => s.failures >= 10, reward: 1000 },
+  'fail_50': { condition: (s) => s.failures >= 50, reward: 3000 },
+  'fail_100': { condition: (s) => s.failures >= 100, reward: 8000 },
+  'fail_300': { condition: (s) => s.failures >= 300, reward: 25000 },
+  'fail_500': { condition: (s) => s.failures >= 500, reward: 50000 },
+  'destroy_1': { condition: (s) => (s.destroys || 0) >= 1, reward: 2000 },
+  'destroy_10': { condition: (s) => (s.destroys || 0) >= 10, reward: 10000 },
+  'destroy_50': { condition: (s) => (s.destroys || 0) >= 50, reward: 50000 },
+  // 특수
+  'profit_positive': { condition: (s) => s.totalEarned > s.totalSpent, reward: 2000 },
+  'profit_100k': { condition: (s) => s.totalEarned - s.totalSpent >= 100000, reward: 10000 },
+  'profit_1m': { condition: (s) => s.totalEarned - s.totalSpent >= 1000000, reward: 100000 },
+  'success_rate_50': { condition: (s) => s.attempts >= 100 && (s.successes / s.attempts) >= 0.5, reward: 30000 },
+  'spend_100k': { condition: (s) => s.totalSpent >= 100000, reward: 5000 },
+  'spend_1m': { condition: (s) => s.totalSpent >= 1000000, reward: 50000 },
+  'spend_10m': { condition: (s) => s.totalSpent >= 10000000, reward: 500000 },
+  'battle_10': { condition: (s) => (s.battles || 0) >= 10, reward: 5000 },
+  'battle_win_10': { condition: (s) => (s.wins || 0) >= 10, reward: 10000 },
+};
+
+exports.secureClaimAchievement = onCall({ region }, async (request) => {
+  if (!request.auth) {
+    throw new HttpsError('unauthenticated', '로그인이 필요합니다.');
+  }
+
+  const userId = request.auth.uid;
+  const { achievementId } = request.data;
+
+  if (!achievementId || !ACHIEVEMENTS[achievementId]) {
+    throw new HttpsError('invalid-argument', '유효하지 않은 업적입니다.');
+  }
+
+  const achievement = ACHIEVEMENTS[achievementId];
+  const userRef = db.collection('users').doc(userId);
+
+  try {
+    const result = await db.runTransaction(async (transaction) => {
+      const userDoc = await transaction.get(userRef);
+
+      if (!userDoc.exists) {
+        throw new HttpsError('not-found', '유저를 찾을 수 없습니다.');
+      }
+
+      const userData = userDoc.data();
+      const claimedAchievements = userData.claimedAchievements || [];
+
+      // 이미 수령했는지 체크
+      if (claimedAchievements.includes(achievementId)) {
+        throw new HttpsError('failed-precondition', '이미 수령한 업적입니다.');
+      }
+
+      // 조건 충족 여부 체크 (서버에서 검증)
+      const stats = {
+        ...(userData.stats || {}),
+        ...(userData.battleStats || {})
+      };
+
+      if (!achievement.condition(stats)) {
+        throw new HttpsError('failed-precondition', '업적 조건을 충족하지 않았습니다.');
+      }
+
+      const newGold = Math.min((userData.gold || 0) + achievement.reward, MAX_GOLD);
+
+      transaction.update(userRef, {
+        gold: newGold,
+        claimedAchievements: [...claimedAchievements, achievementId]
+      });
+
+      return {
+        success: true,
+        achievementId,
+        reward: achievement.reward,
+        newGold
+      };
+    });
+
+    return result;
+  } catch (error) {
+    console.error('업적 보상 오류:', error);
+    if (error instanceof HttpsError) {
+      throw error;
+    }
+    throw new HttpsError('internal', '업적 보상 처리 중 오류가 발생했습니다.');
+  }
+});
+
+// ============================================
+// 보안 배틀 보상 함수 (Callable)
+// ============================================
+exports.secureBattleReward = onCall({ region }, async (request) => {
+  if (!request.auth) {
+    throw new HttpsError('unauthenticated', '로그인이 필요합니다.');
+  }
+
+  const userId = request.auth.uid;
+  const { opponentId, won, opponentTotalLevel } = request.data;
+
+  // 기본 검증
+  if (!opponentId || typeof won !== 'boolean' || typeof opponentTotalLevel !== 'number') {
+    throw new HttpsError('invalid-argument', '유효하지 않은 배틀 데이터입니다.');
+  }
+
+  // 레벨 합 제한 (최대 6명 × 20레벨 = 120)
+  if (opponentTotalLevel < 0 || opponentTotalLevel > 120) {
+    throw new HttpsError('invalid-argument', '유효하지 않은 상대 레벨입니다.');
+  }
+
+  const BATTLE_COOLDOWN_MS = 10 * 1000; // 10초 쿨다운
+
+  const userRef = db.collection('users').doc(userId);
+  const opponentRef = db.collection('users').doc(opponentId);
+
+  try {
+    const result = await db.runTransaction(async (transaction) => {
+      const userDoc = await transaction.get(userRef);
+      const opponentDoc = await transaction.get(opponentRef);
+
+      if (!userDoc.exists) {
+        throw new HttpsError('not-found', '유저를 찾을 수 없습니다.');
+      }
+
+      if (!opponentDoc.exists) {
+        throw new HttpsError('not-found', '상대를 찾을 수 없습니다.');
+      }
+
+      const userData = userDoc.data();
+      const lastBattleTime = userData.lastBattleTime || 0;
+      const now = Date.now();
+
+      // 쿨다운 체크
+      if (now - lastBattleTime < BATTLE_COOLDOWN_MS) {
+        throw new HttpsError('resource-exhausted', '배틀 쿨다운 중입니다.');
+      }
+
+      // 자기 자신과 배틀 금지
+      if (userId === opponentId) {
+        throw new HttpsError('invalid-argument', '자신과 배틀할 수 없습니다.');
+      }
+
+      // 배틀 스탯 업데이트
+      const battleStats = userData.battleStats || { battles: 0, wins: 0 };
+      const newBattleStats = {
+        battles: battleStats.battles + 1,
+        wins: battleStats.wins + (won ? 1 : 0)
+      };
+
+      // 승리 시 보상 계산 (서버에서 계산)
+      let reward = 0;
+      if (won) {
+        // 보상: 기본 2000G + 상대팀 레벨당 200G + 랜덤 2000G
+        const randomBonus = secureRandom01() * 2000;
+        const baseReward = 2000 + opponentTotalLevel * 200 + randomBonus;
+        reward = Math.floor(baseReward);
+
+        // 최대 보상 제한 (100,000G)
+        reward = Math.min(reward, 100000);
+      }
+
+      const newGold = Math.min((userData.gold || 0) + reward, MAX_GOLD);
+
+      transaction.update(userRef, {
+        gold: newGold,
+        battleStats: newBattleStats,
+        lastBattleTime: now
+      });
+
+      return {
+        success: true,
+        won,
+        reward,
+        newGold,
+        newBattleStats
+      };
+    });
+
+    return result;
+  } catch (error) {
+    console.error('배틀 보상 오류:', error);
+    if (error instanceof HttpsError) {
+      throw error;
+    }
+    throw new HttpsError('internal', '배틀 보상 처리 중 오류가 발생했습니다.');
   }
 });
 
