@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatGold } from '../utils/constants';
+import { secureClaimDailyReward } from '../utils/firebase';
 
 const DailyRewardPanel = ({ isOpen, onClose, user, onClaimReward }) => {
+  const [isLoading, setIsLoading] = useState(false);
   const [canClaim, setCanClaim] = useState(false);
   const [streak, setStreak] = useState(0);
   const [timeUntilReset, setTimeUntilReset] = useState('');
@@ -74,13 +76,29 @@ const DailyRewardPanel = ({ isOpen, onClose, user, onClaimReward }) => {
     return baseReward + streakBonus;
   };
 
-  const handleClaim = () => {
-    if (!canClaim) return;
-    const newStreak = streak + 1;
-    const reward = getRewardAmount(newStreak);
-    onClaimReward(reward, newStreak);
-    setCanClaim(false);
-    setStreak(newStreak);
+  const handleClaim = async () => {
+    if (!canClaim || isLoading) return;
+    setIsLoading(true);
+
+    try {
+      const result = await secureClaimDailyReward({});
+      const data = result.data;
+
+      // 서버에서 반환된 보상 정보로 업데이트
+      onClaimReward(data.reward, data.streak);
+      setCanClaim(false);
+      setStreak(data.streak);
+    } catch (error) {
+      console.error('일일 보상 수령 실패:', error);
+      if (error.code === 'functions/failed-precondition') {
+        alert('오늘 이미 보상을 수령했습니다.');
+        setCanClaim(false);
+      } else {
+        alert(error.message || '보상 수령 중 오류가 발생했습니다.');
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -164,11 +182,12 @@ const DailyRewardPanel = ({ isOpen, onClose, user, onClaimReward }) => {
           {canClaim ? (
             <motion.button
               onClick={handleClaim}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              style={styles.claimBtn}
+              disabled={isLoading}
+              whileHover={!isLoading ? { scale: 1.05 } : {}}
+              whileTap={!isLoading ? { scale: 0.95 } : {}}
+              style={{ ...styles.claimBtn, opacity: isLoading ? 0.7 : 1 }}
             >
-              🎁 보상 받기 ({formatGold(getRewardAmount(streak + 1))}G)
+              {isLoading ? '처리 중...' : `🎁 보상 받기 (${formatGold(getRewardAmount(streak + 1))}G)`}
             </motion.button>
           ) : (
             <div style={styles.nextReward}>

@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
-import { db, requestFCMToken, onForegroundMessage } from '../utils/firebase';
+import { db, requestFCMToken, onForegroundMessage, verifyKakaoToken, signInWithFirebase, signOutFirebase, onAuthChange, secureSendGold as secureSendGoldFn } from '../utils/firebase';
 import { doc, getDoc, setDoc, updateDoc, collection, query, where, getDocs, orderBy, limit, onSnapshot } from 'firebase/firestore';
 
 const AuthContext = createContext();
@@ -13,10 +13,8 @@ const calculateOfflineGold = (lastLogin) => {
   const now = Date.now();
   const diffHours = (now - lastTime) / (1000 * 60 * 60);
 
-  // 최소 1시간 이상 접속 안했을 때만
   if (diffHours < 1) return 0;
 
-  // 시간당 2,000G, 최대 12시간
   const hours = Math.min(diffHours, 12);
   return Math.floor(hours * 2000);
 };
@@ -24,14 +22,11 @@ const calculateOfflineGold = (lastLogin) => {
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [offlineReward, setOfflineReward] = useState(null); // 오프라인 보상 정보
-
-  // 🔥 실시간 리스너 해제 함수 저장
+  const [offlineReward, setOfflineReward] = useState(null);
   const [unsubscribeUser, setUnsubscribeUser] = useState(null);
 
-  // 🔥 실시간 유저 데이터 구독 시작
+  // 실시간 유저 데이터 구독
   const startUserListener = (userId) => {
-    // 기존 리스너 해제
     if (unsubscribeUser) {
       unsubscribeUser();
     }
@@ -41,7 +36,6 @@ export const AuthProvider = ({ children }) => {
       if (docSnap.exists()) {
         const firebaseData = docSnap.data();
         setUser(prev => {
-          // 기존 로컬 데이터와 Firebase 데이터 병합
           const merged = { ...prev, ...firebaseData, id: userId };
           localStorage.setItem('kakaoUser', JSON.stringify(merged));
           return merged;
@@ -54,112 +48,62 @@ export const AuthProvider = ({ children }) => {
     setUnsubscribeUser(() => unsubscribe);
   };
 
-  // 함수들을 useEffect 전에 선언
-  const saveUserToFirestore = async (kakaoUser) => {
-    const userRef = doc(db, 'users', kakaoUser.id);
-
-    try {
-      const userSnap = await getDoc(userRef);
-      let userData;
-
-      if (userSnap.exists()) {
-        await updateDoc(userRef, {
-          nickname: kakaoUser.nickname,
-          profileImage: kakaoUser.profileImage,
-          lastLogin: new Date().toISOString(),
-        });
-        userData = { ...kakaoUser, ...userSnap.data() };
-      } else {
-        userData = {
-          ...kakaoUser,
-          gold: 50000,
-          stats: { attempts: 0, successes: 0, failures: 0, maxLevel: 0, totalSpent: 0, totalEarned: 0 },
-          createdAt: new Date().toISOString(),
-          lastLogin: new Date().toISOString(),
-        };
-        // email도 저장
-        if (kakaoUser.email) {
-          userData.email = kakaoUser.email;
-        }
-        await setDoc(userRef, userData);
-      }
-
-      setUser(userData);
-      localStorage.setItem('kakaoUser', JSON.stringify(userData));
-
-      // 🔥 실시간 리스너 시작
-      startUserListener(kakaoUser.id);
-
-    } catch (dbErr) {
-      console.error('Firestore 오류:', dbErr);
-      const localData = {
-        ...kakaoUser,
-        gold: 50000,
-        stats: { attempts: 0, successes: 0, failures: 0, maxLevel: 0, totalSpent: 0, totalEarned: 0 },
-      };
-      setUser(localData);
-      localStorage.setItem('kakaoUser', JSON.stringify(localData));
-    }
-    setLoading(false);
-  };
-
-  const fetchKakaoUser = async () => {
-    try {
-      const res = await window.Kakao.API.request({
-        url: '/v2/user/me',
-      });
-      const kakaoUser = {
-        id: res.id.toString(),
-        nickname: res.properties?.nickname || '사용자',
-        profileImage: res.properties?.profile_image || null,
-        email: res.kakao_account?.email || null,
-      };
-      await saveUserToFirestore(kakaoUser);
-    } catch (err) {
-      console.error('카카오 API 오류:', err);
-      setLoading(false);
-    }
-  };
-
-  const syncUserData = async (userId) => {
+  // Firebase Auth로 사용자 데이터 동기화
+  const syncUserDataFromFirebase = async (userId) => {
     try {
       const userRef = doc(db, 'users', userId);
       const userSnap = await getDoc(userRef);
+
       if (userSnap.exists()) {
         const firebaseData = userSnap.data();
-        const localData = JSON.parse(localStorage.getItem('kakaoUser'));
-        const merged = { ...localData, ...firebaseData };
 
         // 오프라인 골드 계산
-        const offlineGold = calculateOfflineGold(firebaseData.lastLogin);
+        const offlineGold = calculateOfflineGold(firebaseData.lastLogin?.toDate?.() || firebaseData.lastLogin);
         if (offlineGold > 0) {
           const hoursAway = Math.min(
-            Math.floor((Date.now() - new Date(firebaseData.lastLogin).getTime()) / (1000 * 60 * 60)),
+            Math.floor((Date.now() - new Date(firebaseData.lastLogin?.toDate?.() || firebaseData.lastLogin).getTime()) / (1000 * 60 * 60)),
             12
           );
           setOfflineReward({ gold: offlineGold, hours: hoursAway });
-          merged.gold = (merged.gold || 0) + offlineGold;
 
-          // Firebase 업데이트 (골드 추가 + lastLogin 갱신)
+          const newGold = (firebaseData.gold || 0) + offlineGold;
           await updateDoc(userRef, {
-            gold: merged.gold,
+            gold: newGold,
             lastLogin: new Date().toISOString()
           });
+          firebaseData.gold = newGold;
         } else {
-          // lastLogin만 갱신
           await updateDoc(userRef, {
             lastLogin: new Date().toISOString()
           });
         }
 
-        setUser(merged);
-        localStorage.setItem('kakaoUser', JSON.stringify(merged));
-
-        // 🔥 실시간 리스너 시작
+        setUser({ ...firebaseData, id: userId });
+        localStorage.setItem('kakaoUser', JSON.stringify({ ...firebaseData, id: userId }));
         startUserListener(userId);
       }
-    } catch (_err) {
-      // 동기화 스킵
+    } catch (err) {
+      console.error('데이터 동기화 실패:', err);
+    }
+  };
+
+  // 카카오 로그인 후 Firebase 인증
+  const handleKakaoLoginComplete = async (accessToken) => {
+    try {
+      // Cloud Function으로 카카오 토큰 검증 및 Firebase 토큰 발급
+      const result = await verifyKakaoToken({ accessToken });
+      const { customToken, user: kakaoUserInfo } = result.data;
+
+      // Firebase Custom Token으로 로그인
+      await signInWithFirebase(customToken);
+
+      // 사용자 데이터 동기화
+      await syncUserDataFromFirebase(kakaoUserInfo.id);
+
+      return true;
+    } catch (error) {
+      console.error('카카오-Firebase 인증 실패:', error);
+      throw error;
     }
   };
 
@@ -170,11 +114,24 @@ export const AuthProvider = ({ children }) => {
       window.Kakao.init(kakaoKey);
     }
 
-    // URL에서 code 확인 (카카오 로그인 후 리다이렉트)
+    // Firebase Auth 상태 구독
+    const unsubscribeAuth = onAuthChange(async (firebaseUser) => {
+      if (firebaseUser) {
+        // Firebase 인증됨 - 사용자 데이터 로드
+        await syncUserDataFromFirebase(firebaseUser.uid);
+      } else {
+        // 인증 안됨
+        setUser(null);
+      }
+      setLoading(false);
+    });
+
+    // URL에서 카카오 code 확인 (OAuth 리다이렉트)
     const urlParams = new URLSearchParams(window.location.search);
     const code = urlParams.get('code');
+
     if (code) {
-      // code로 access token 받기
+      // 카카오 OAuth code로 access token 교환
       fetch('https://kauth.kakao.com/oauth/token', {
         method: 'POST',
         headers: {
@@ -188,10 +145,10 @@ export const AuthProvider = ({ children }) => {
         }),
       })
         .then((res) => res.json())
-        .then((data) => {
+        .then(async (data) => {
           if (data.access_token) {
             window.Kakao.Auth.setAccessToken(data.access_token);
-            fetchKakaoUser();
+            await handleKakaoLoginComplete(data.access_token);
             window.history.replaceState(null, '', window.location.pathname);
           }
         })
@@ -199,24 +156,10 @@ export const AuthProvider = ({ children }) => {
           console.error('토큰 교환 실패:', err);
           setLoading(false);
         });
-      return;
     }
 
-    // 저장된 사용자 복원
-    const savedUser = localStorage.getItem('kakaoUser');
-    if (savedUser) {
-      try {
-        const parsed = JSON.parse(savedUser);
-        setUser(parsed);
-        syncUserData(parsed.id);
-      } catch (_e) {
-        localStorage.removeItem('kakaoUser');
-      }
-    }
-    setLoading(false);
-
-    // 🔥 컴포넌트 언마운트 시 리스너 해제
     return () => {
+      unsubscribeAuth();
       if (unsubscribeUser) {
         unsubscribeUser();
       }
@@ -228,8 +171,7 @@ export const AuthProvider = ({ children }) => {
       alert('카카오 SDK 로드 실패');
       return;
     }
-    
-    // 현재 페이지 URL을 redirect URI로 사용 (HTTPS 강제)
+
     const origin = window.location.origin.replace('http://', 'https://');
     const redirectUri = origin + window.location.pathname;
 
@@ -239,8 +181,7 @@ export const AuthProvider = ({ children }) => {
     });
   };
 
-  const logout = () => {
-    // 🔥 리스너 해제
+  const logout = async () => {
     if (unsubscribeUser) {
       unsubscribeUser();
       setUnsubscribeUser(null);
@@ -249,6 +190,13 @@ export const AuthProvider = ({ children }) => {
     if (window.Kakao && window.Kakao.Auth.getAccessToken()) {
       window.Kakao.Auth.logout();
     }
+
+    try {
+      await signOutFirebase();
+    } catch (err) {
+      console.error('Firebase 로그아웃 실패:', err);
+    }
+
     setUser(null);
     localStorage.removeItem('kakaoUser');
   };
@@ -256,13 +204,11 @@ export const AuthProvider = ({ children }) => {
   const updateUserData = async (data) => {
     if (!user) return;
 
-    // 🔥 로컬 상태는 실시간 리스너가 업데이트하므로 Firebase만 업데이트
     try {
       const userRef = doc(db, 'users', user.id);
       await updateDoc(userRef, data);
     } catch (err) {
       console.error('Firestore 업데이트 실패:', err);
-      // 실패 시 로컬만 업데이트
       const updatedUser = { ...user, ...data };
       setUser(updatedUser);
       localStorage.setItem('kakaoUser', JSON.stringify(updatedUser));
@@ -278,7 +224,7 @@ export const AuthProvider = ({ children }) => {
       const querySnapshot = await getDocs(q);
       const results = [];
       querySnapshot.forEach((doc) => {
-        if (doc.id !== user?.id) { // 자기 자신 제외
+        if (doc.id !== user?.id) {
           results.push({ id: doc.id, ...doc.data() });
         }
       });
@@ -309,7 +255,7 @@ export const AuthProvider = ({ children }) => {
     return true;
   };
 
-  // 친구 목록 가져오기 (상세 정보 포함)
+  // 친구 목록 가져오기
   const getFriendsList = async () => {
     if (!user || !user.friends || user.friends.length === 0) return [];
     const friendsData = [];
@@ -327,41 +273,18 @@ export const AuthProvider = ({ children }) => {
     return friendsData;
   };
 
-  // 골드 선물하기
+  // 골드 선물하기 (보안 Cloud Function 사용)
   const sendGold = async (friendId, amount) => {
-    if (!user || amount <= 0 || amount > user.gold) return { success: false, message: '골드가 부족합니다' };
+    if (!user || amount <= 0 || amount > user.gold) {
+      return { success: false, message: '골드가 부족합니다' };
+    }
 
     try {
-      // 내 골드 차감
-      const newGold = user.gold - amount;
-      await updateUserData({ gold: newGold });
-
-      // 상대방 골드 증가
-      const friendRef = doc(db, 'users', friendId);
-      const friendSnap = await getDoc(friendRef);
-      if (friendSnap.exists()) {
-        const friendData = friendSnap.data();
-        const friendNewGold = (friendData.gold || 0) + amount;
-        await updateDoc(friendRef, { gold: friendNewGold });
-
-        // 선물 알림 저장
-        const notificationRef = doc(collection(db, 'giftNotifications'));
-        await setDoc(notificationRef, {
-          recipientId: friendId,
-          senderId: user.id,
-          senderNickname: user.nickname,
-          senderProfileImage: user.profileImage,
-          amount: amount,
-          timestamp: new Date().toISOString(),
-          read: false
-        });
-
-        return { success: true, message: `${amount}G를 선물했습니다!` };
-      }
-      return { success: false, message: '친구를 찾을 수 없습니다' };
+      const result = await secureSendGoldFn({ recipientId: friendId, amount });
+      return { success: true, message: `${amount}G를 선물했습니다!` };
     } catch (err) {
       console.error('선물 실패:', err);
-      return { success: false, message: '선물 실패' };
+      return { success: false, message: err.message || '선물 실패' };
     }
   };
 
@@ -413,7 +336,6 @@ export const AuthProvider = ({ children }) => {
         battleWins: []
       };
 
-      // 모든 사용자 가져오기 (최대 100명)
       const querySnapshot = await getDocs(query(usersRef, limit(100)));
       const users = [];
       querySnapshot.forEach((doc) => {
@@ -429,7 +351,6 @@ export const AuthProvider = ({ children }) => {
         });
       });
 
-      // 각 카테고리별 정렬
       rankings.maxLevel = [...users]
         .sort((a, b) => b.maxLevel - a.maxLevel)
         .slice(0, 20)
@@ -457,21 +378,11 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // 일일 보상 수령
+  // 일일 보상 수령 (서버에서 처리하므로 여기서는 UI 업데이트만)
   const claimDailyReward = async (reward, newStreak) => {
-    if (!user) return false;
-    try {
-      const newGold = (user.gold || 0) + reward;
-      await updateUserData({
-        gold: newGold,
-        lastDailyReward: new Date().toISOString(),
-        dailyStreak: newStreak
-      });
-      return true;
-    } catch (err) {
-      console.error('일일 보상 수령 실패:', err);
-      return false;
-    }
+    // 실제 보상은 secureClaimDailyReward Cloud Function에서 처리
+    // 여기서는 호환성을 위해 유지
+    return true;
   };
 
   // 업적 보상 수령
@@ -514,7 +425,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // 랜덤 매칭용 상대 목록 가져오기
+  // 랜덤 매칭용 상대 목록
   const getRandomOpponents = async (count = 5) => {
     if (!user) return [];
     try {
@@ -524,15 +435,12 @@ export const AuthProvider = ({ children }) => {
       querySnapshot.forEach((docSnap) => {
         if (docSnap.id !== user.id) {
           const data = docSnap.data();
-          // 배틀 가능한 유저만 (현재 아이템이나 보관함에 영웅이 있는 경우)
           const hasCurrentItem = data.level > 0 && !data.isDestroyed;
           const hasInventory = data.inventory && data.inventory.length > 0;
 
           if (hasCurrentItem || hasInventory) {
-            // 상대의 실제 팀 구성
             const team = [];
 
-            // 현재 아이템 추가
             if (hasCurrentItem) {
               team.push({
                 id: 'current',
@@ -543,7 +451,6 @@ export const AuthProvider = ({ children }) => {
               });
             }
 
-            // 보관함 아이템 추가
             if (data.inventory) {
               data.inventory.forEach((item, idx) => {
                 const itemLevel = item?.level || item || 0;
@@ -565,13 +472,12 @@ export const AuthProvider = ({ children }) => {
                 nickname: data.nickname || '익명',
                 profileImage: data.profileImage,
                 stats: data.stats,
-                team: team.sort((a, b) => b.level - a.level) // 레벨 높은 순 정렬
+                team: team.sort((a, b) => b.level - a.level)
               });
             }
           }
         }
       });
-      // 랜덤 셔플 후 count개만 반환
       const shuffled = users.sort(() => Math.random() - 0.5);
       return shuffled.slice(0, count);
     } catch (err) {
@@ -580,7 +486,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // 배틀 결과 저장 (상대방에게 알림)
+  // 배틀 결과 저장
   const saveBattleNotification = async (opponentId, battleResult) => {
     if (!user) return false;
     try {
@@ -590,7 +496,7 @@ export const AuthProvider = ({ children }) => {
         attackerId: user.id,
         attackerName: user.nickname,
         attackerImage: user.profileImage,
-        attackerWon: battleResult.won, // 공격자 기준 승패
+        attackerWon: battleResult.won,
         attackerLevel: battleResult.myLevel,
         attackerAttack: battleResult.myAttack || 0,
         attackerHp: battleResult.myHp || 0,
@@ -663,7 +569,6 @@ export const AuthProvider = ({ children }) => {
   // 포그라운드 알림 설정
   useEffect(() => {
     const unsubscribe = onForegroundMessage((payload) => {
-      // 브라우저 알림 표시
       if (Notification.permission === 'granted') {
         new Notification(payload.notification?.title || '강화 시뮬레이터', {
           body: payload.notification?.body,
@@ -674,13 +579,12 @@ export const AuthProvider = ({ children }) => {
     return unsubscribe;
   }, []);
 
-  // 10강 이상 달성 시 친구들에게 알림 전송
+  // 10강 이상 달성 시 친구들에게 알림
   const notifyFriendsHighEnhance = async (newLevel) => {
     if (!user || newLevel < 10) return;
     if (!user.friends || user.friends.length === 0) return;
 
     try {
-      // 친구들의 FCM 토큰 가져오기
       const friendTokens = [];
       for (const friendId of user.friends) {
         const friendRef = doc(db, 'users', friendId);
@@ -695,7 +599,6 @@ export const AuthProvider = ({ children }) => {
 
       if (friendTokens.length === 0) return;
 
-      // 알림 데이터 저장 (Firebase Functions에서 처리)
       const notifRef = doc(collection(db, 'enhanceNotifications'));
       await setDoc(notifRef, {
         senderId: user.id,
@@ -716,10 +619,9 @@ export const AuthProvider = ({ children }) => {
     setOfflineReward(null);
   };
 
-  // 강화 로그 저장 (실시간 피드용)
+  // 강화 로그 저장
   const saveEnhanceLog = async (level, result, previousLevel) => {
     if (!user) return;
-    // 10강 이상만 저장 (성공 시 결과 레벨, 파괴/실패 시 이전 레벨 기준)
     const targetLevel = result === 'success' ? level : previousLevel;
     if (targetLevel < 10) return;
 
@@ -731,7 +633,7 @@ export const AuthProvider = ({ children }) => {
         profileImage: user.profileImage,
         level: level,
         previousLevel: previousLevel,
-        result: result, // 'success' | 'fail' | 'destroyed'
+        result: result,
         timestamp: new Date().toISOString()
       });
     } catch (err) {
@@ -750,7 +652,7 @@ export const AuthProvider = ({ children }) => {
         userId: user.id,
         nickname: user.nickname,
         profileImage: user.profileImage,
-        message: message.trim().slice(0, 100), // 최대 100자
+        message: message.trim().slice(0, 100),
         timestamp: new Date().toISOString()
       });
     } catch (err) {

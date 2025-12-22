@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { formatGold } from '../utils/constants';
+import { secureAdReward } from '../utils/firebase';
 
 const AD_DURATION = 30; // 30초
 const DAILY_LIMIT = 10; // 하루 10회
@@ -83,21 +84,25 @@ const AdRewardPage = () => {
     };
   }, [canWatch]);
 
-  // 보상 수령
+  // 🔒 서버 기반 보상 수령 (Cloud Function)
   const claimReward = async () => {
     if (!user) return;
 
-    const today = new Date().toDateString();
-    const newCount = todayCount + 1;
-    const newGold = (user.gold || 0) + REWARD_GOLD;
+    try {
+      const result = await secureAdReward({});
+      const data = result.data;
 
-    await updateUserData({
-      gold: newGold,
-      lastAdDate: today,
-      adCount: newCount
-    });
-
-    navigate('/');
+      // 서버에서 성공적으로 보상 지급됨
+      console.log(`광고 보상 수령: +${data.reward}G`);
+      navigate('/');
+    } catch (error) {
+      console.error('광고 보상 수령 실패:', error);
+      if (error.code === 'functions/resource-exhausted') {
+        alert(error.message || '쿨다운 중입니다. 잠시 후 다시 시도해주세요.');
+      } else {
+        alert(error.message || '보상 수령 중 오류가 발생했습니다.');
+      }
+    }
   };
 
   // 나가기
